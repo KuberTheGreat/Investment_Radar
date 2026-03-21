@@ -1,0 +1,22 @@
+[
+  {"function": "CDLENGULFING", "name": "Engulfing", "type": "Both"},
+  {"function": "CDLMORNINGSTAR", "name": "Morning Star", "type": "Bullish"},
+  {"function": "CDLEVENINGSTAR", "name": "Evening Star", "type": "Bearish"},
+  {"function": "CDLHAMMER", "name": "Hammer", "type": "Bullish"},
+  {"function": "CDLINVERTEDHAMMER", "name": "Inverted Hammer", "type": "Bullish"},
+  {"function": "CDLSHOOTINGSTAR", "name": "Shooting Star", "type": "Bearish"},
+  {"function": "CDLDOJI", "name": "Doji", "type": "Neutral"},
+  {"function": "CDLDRAGONFLYDOJI", "name": "Dragonfly Doji", "type": "Bullish"},
+  {"function": "CDLGRAVESTONEDOJI", "name": "Gravestone Doji", "type": "Bearish"},
+  {"function": "CDLHARAMI", "name": "Harami", "type": "Both"},
+  {"function": "CDLDARKCLOUDCOVER", "name": "Dark Cloud Cover", "type": "Bearish"},
+  {"function": "CDLPIERCING", "name": "Piercing Line", "type": "Bullish"},
+  {"function": "CDL3WHITESOLDIERS", "name": "Three White Soldiers", "type": "Bullish"},
+  {"function": "CDL3BLACKCROWS", "name": "Three Black Crows", "type": "Bearish"},
+  {"function": "CDLHANGINGMAN", "name": "Hanging Man", "type": "Bearish"},
+  {"function": "CDLSPINNINGTOP", "name": "Spinning Top", "type": "Neutral"},
+  {"function": "CDLMARUBOZU", "name": "Marubozu", "type": "Both"},
+  {"function": "CDLTASUKIGAP", "name": "Tasuki Gap", "type": "Both"},
+  {"function": "CDL3INSIDE", "name": "Three Inside", "type": "Both"},
+  {"function": "CDLRISEFALL3METHODS", "name": "Rising/Falling Three Methods", "type": "Both"}
+]
