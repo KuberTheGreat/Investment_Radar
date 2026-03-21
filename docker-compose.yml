@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  timescaledb:
+    image: timescale/timescaledb:latest-pg15
+    container_name: investorradar_db
+    environment:
+      POSTGRES_USER: investor_user
+      POSTGRES_PASSWORD: investor_password
+      POSTGRES_DB: investorradar
+    ports:
+      - "5433:5432"
+    volumes:
+      - timescaledb_data:/home/postgres/pgdata/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U investor_user -d investorradar"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7.2-alpine
+    container_name: investorradar_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  timescaledb_data:
+  redis_data:
