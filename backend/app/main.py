@@ -18,6 +18,9 @@ async def lifespan(app: FastAPI):
     scheduler.add_job(run_corporate_events_pipeline, 'interval', minutes=60, id='corporate_events_job', max_instances=1)
     scheduler.add_job(run_confluence_scorer, 'interval', minutes=15, id='scorer_job', max_instances=1)
     scheduler.add_job(run_opportunity_radar, 'interval', minutes=15, id='radar_job', max_instances=1)
+    # Signal expiry: runs every day at midnight IST (18:30 UTC)
+    from app.api.endpoints import expire_old_signals
+    scheduler.add_job(expire_old_signals, 'cron', hour=18, minute=30, id='signal_expiry_job')
     scheduler.start()
     
     # Run once immediately on startup sequentially to seed DB

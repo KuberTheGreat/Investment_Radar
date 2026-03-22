@@ -1,13 +1,13 @@
 import asyncio
 from typing import Optional
-from fastapi import APIRouter, Depends, Query, Path
+from fastapi import APIRouter, Depends, Query, Path, HTTPException
 from sse_starlette.sse import EventSourceResponse
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, desc
+from sqlalchemy import select, desc, func
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 
-from app.core.database import get_db
+from app.core.database import get_db, AsyncSessionLocal
 from app.models.signals import Signal
 from app.models.market_data import OHLCCandle
 from app.models.patterns import DetectedPattern
@@ -16,100 +16,291 @@ from app.services.llm_explainer import llm_service
 
 router = APIRouter()
 
+# ── Signals Feed ────────────────────────────────────────────────────────────
+
 @router.get("/signals")
 async def get_signals(
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
     symbol: Optional[str] = None,
-    signal_type: Optional[str] = None,
+    signal_type: Optional[str] = None,           # "pattern" | "opportunity"
+    direction: Optional[str] = None,              # "bullish" | "bearish"
+    min_win_rate: Optional[float] = None,         # e.g. 60.0
+    min_confluence: Optional[int] = None,         # 0-3
     high_confluence_only: bool = False,
+    archived: bool = False,                       # include is_active=FALSE
     db: AsyncSession = Depends(get_db)
 ):
     stmt = select(Signal)
+
+    if not archived:
+        stmt = stmt.where(Signal.is_active == True)
     if symbol:
         stmt = stmt.where(Signal.symbol == symbol.upper())
     if signal_type:
         stmt = stmt.where(Signal.signal_type == signal_type)
     if high_confluence_only:
         stmt = stmt.where(Signal.high_confluence == True)
-        
+    if direction:
+        # direction comes from the linked detected_pattern; stored in signal_type direction prefix for opportunity signals
+        # For pattern signals, join DetectedPattern to filter by signal_direction
+        stmt = stmt.join(DetectedPattern, Signal.pattern_id == DetectedPattern.id, isouter=True)
+        stmt = stmt.where(DetectedPattern.signal_direction == direction.lower())
+    if min_win_rate is not None:
+        stmt = stmt.where(Signal.win_rate_15d >= min_win_rate)
+    if min_confluence is not None:
+        stmt = stmt.where(Signal.confluence_score >= min_confluence)
+
     stmt = stmt.order_by(desc(Signal.signal_rank), desc(Signal.created_at)).offset(skip).limit(limit)
     result = await db.execute(stmt)
     signals = result.scalars().all()
-    return {"data": signals, "skip": skip, "limit": limit}
+
+    return {
+        "data": [_signal_to_dict(s) for s in signals],
+        "skip": skip,
+        "limit": limit,
+        "total": len(signals)
+    }
+
+
+@router.get("/signals/{signal_id}")
+async def get_signal_detail(signal_id: str = Path(...), db: AsyncSession = Depends(get_db)):
+    """Full signal detail — backtest metrics, confluence events, paragraph explanation."""
+    stmt = select(Signal).where(Signal.id == signal_id)
+    result = await db.execute(stmt)
+    signal = result.scalars().first()
+    if not signal:
+        raise HTTPException(status_code=404, detail="Signal not found")
+
+    detail = _signal_to_dict(signal)
+
+    # Attach pattern
+    if signal.pattern_id:
+        p_stmt = select(DetectedPattern).where(DetectedPattern.id == signal.pattern_id)
+        p_res = await db.execute(p_stmt)
+        pattern = p_res.scalars().first()
+        if pattern:
+            detail["pattern"] = {
+                "pattern_name": pattern.pattern_name,
+                "signal_direction": pattern.signal_direction,
+                "timeframe": pattern.timeframe,
+                "detected_at": pattern.detected_at.isoformat() if pattern.detected_at else None,
+            }
+
+    # Attach corporate events
+    if signal.event_ids:
+        e_stmt = select(CorporateEvent).where(CorporateEvent.id.in_(signal.event_ids))
+        e_res = await db.execute(e_stmt)
+        events = e_res.scalars().all()
+        detail["events"] = [
+            {
+                "id": str(e.id),
+                "event_type": e.event_type,
+                "event_date": e.event_date.isoformat() if e.event_date else None,
+                "party_name": e.party_name,
+                "total_value_cr": float(e.total_value_cr) if e.total_value_cr else None,
+                "source_reference": e.source_reference,
+                "is_anomaly": e.is_anomaly,
+            }
+            for e in events
+        ]
+
+    return detail
+
+
+# ── Stock Data ────────────────────────────────────────────────────────────────
 
 @router.get("/stock/{symbol}")
-async def get_stock_ohlcv(symbol: str = Path(...), db: AsyncSession = Depends(get_db)):
-    """
-    Format for lightweight-charts:
-    [ { time: 1640995200, open: 32.51, high: 32.51, low: 32.51, close: 32.51 }, ... ]
-    """
-    stmt = select(OHLCCandle).where(OHLCCandle.symbol == symbol.upper()).order_by(OHLCCandle.timestamp)
+async def get_stock_ohlcv(
+    symbol: str = Path(...),
+    timeframe: str = Query("15m", regex="^(1m|5m|15m|1d)$"),
+    from_ts: Optional[str] = Query(None, alias="from"),
+    to_ts: Optional[str] = Query(None, alias="to"),
+    db: AsyncSession = Depends(get_db)
+):
+    """OHLCV formatted for lightweight-charts. Supports timeframe + date range filters."""
+    stmt = select(OHLCCandle).where(
+        OHLCCandle.symbol == symbol.upper(),
+        OHLCCandle.timeframe == timeframe
+    )
+    if from_ts:
+        stmt = stmt.where(OHLCCandle.timestamp >= datetime.fromisoformat(from_ts))
+    if to_ts:
+        stmt = stmt.where(OHLCCandle.timestamp <= datetime.fromisoformat(to_ts))
+    stmt = stmt.order_by(OHLCCandle.timestamp)
+
     result = await db.execute(stmt)
     candles = result.scalars().all()
-    
-    data = []
-    for c in candles:
-        data.append({
+
+    return [
+        {
             "time": int(c.timestamp.timestamp()),
             "open": float(c.open),
             "high": float(c.high),
             "low": float(c.low),
             "close": float(c.close),
             "volume": c.volume
-        })
-    return data
+        }
+        for c in candles
+    ]
+
 
 @router.get("/stock/{symbol}/patterns")
-async def get_stock_patterns(symbol: str = Path(...), db: AsyncSession = Depends(get_db)):
-    stmt = select(DetectedPattern).where(DetectedPattern.symbol == symbol.upper()).order_by(desc(DetectedPattern.detected_at)).limit(50)
+async def get_stock_patterns(
+    symbol: str = Path(...),
+    from_ts: Optional[str] = Query(None, alias="from"),
+    to_ts: Optional[str] = Query(None, alias="to"),
+    db: AsyncSession = Depends(get_db)
+):
+    stmt = select(DetectedPattern).where(DetectedPattern.symbol == symbol.upper())
+    if from_ts:
+        stmt = stmt.where(DetectedPattern.detected_at >= datetime.fromisoformat(from_ts))
+    if to_ts:
+        stmt = stmt.where(DetectedPattern.detected_at <= datetime.fromisoformat(to_ts))
+    stmt = stmt.order_by(desc(DetectedPattern.detected_at)).limit(100)
     result = await db.execute(stmt)
-    return result.scalars().all()
+    patterns = result.scalars().all()
+    return [
+        {
+            "id": str(p.id),
+            "symbol": p.symbol,
+            "pattern_name": p.pattern_name,
+            "signal_direction": p.signal_direction,
+            "timeframe": p.timeframe,
+            "detected_at": p.detected_at.isoformat() if p.detected_at else None,
+        }
+        for p in patterns
+    ]
+
 
 @router.get("/stock/{symbol}/events")
-async def get_stock_events(symbol: str = Path(...), db: AsyncSession = Depends(get_db)):
-    stmt = select(CorporateEvent).where(CorporateEvent.symbol == symbol.upper()).order_by(desc(CorporateEvent.event_date)).limit(50)
+async def get_stock_events(
+    symbol: str = Path(...),
+    from_ts: Optional[str] = Query(None, alias="from"),
+    to_ts: Optional[str] = Query(None, alias="to"),
+    db: AsyncSession = Depends(get_db)
+):
+    stmt = select(CorporateEvent).where(CorporateEvent.symbol == symbol.upper())
+    if from_ts:
+        stmt = stmt.where(CorporateEvent.event_date >= datetime.fromisoformat(from_ts).date())
+    if to_ts:
+        stmt = stmt.where(CorporateEvent.event_date <= datetime.fromisoformat(to_ts).date())
+    stmt = stmt.order_by(desc(CorporateEvent.event_date)).limit(50)
     result = await db.execute(stmt)
-    return result.scalars().all()
+    events = result.scalars().all()
+    return [
+        {
+            "id": str(e.id),
+            "symbol": e.symbol,
+            "event_type": e.event_type,
+            "event_date": e.event_date.isoformat() if e.event_date else None,
+            "party_name": e.party_name,
+            "quantity": e.quantity,
+            "price_per_share": float(e.price_per_share) if e.price_per_share else None,
+            "total_value_cr": float(e.total_value_cr) if e.total_value_cr else None,
+            "is_anomaly": e.is_anomaly,
+            "source_reference": e.source_reference,
+        }
+        for e in events
+    ]
+
+
+# ── LLM Explain (SSE) ─────────────────────────────────────────────────────────
 
 @router.get("/explain/{signal_id}")
 async def explain_signal(signal_id: str = Path(...), db: AsyncSession = Depends(get_db)):
-    """
-    Stream the explanation utilizing SSE
-    """
+    """Stream deep-dive LLM explanation via SSE."""
     return EventSourceResponse(llm_service.stream_deep_dive(signal_id, db))
+
+
+# ── Alerts (SSE) ───────────────────────────────────────────────────────────────
 
 @router.get("/alerts")
 async def stream_alerts(db: AsyncSession = Depends(get_db)):
-    """
-    Stream newly created signals in real-time.
-    We poll the DB for new signals since the last check.
-    """
-    import logging
-    logger = logging.getLogger("alerts")
-    
+    """Real-time SSE push of newly created signals."""
     async def event_generator():
         last_checked = datetime.utcnow()
         while True:
             await asyncio.sleep(5)
-            # Fetch new signals
             stmt = select(Signal).where(Signal.created_at > last_checked).order_by(Signal.created_at)
             result = await db.execute(stmt)
             new_signals = result.scalars().all()
-            
+
             if new_signals:
                 last_checked = datetime.utcnow()
                 for sig in new_signals:
-                    payload = {
-                        "id": str(sig.id),
-                        "symbol": sig.symbol,
-                        "signal_type": sig.signal_type,
-                        "signal_rank": float(sig.signal_rank) if sig.signal_rank else 0,
-                        "created_at": sig.created_at.isoformat()
-                    }
-                    yield f"data: {json.dumps(payload)}\n\n"
+                    yield f"data: {json.dumps({'id': str(sig.id), 'symbol': sig.symbol, 'signal_type': sig.signal_type, 'signal_rank': float(sig.signal_rank) if sig.signal_rank else 0, 'created_at': sig.created_at.isoformat()})}\n\n"
             else:
-                # Keep-alive ping
                 yield ": ping\n\n"
-                
+
     return EventSourceResponse(event_generator())
+
+
+# ── Health ────────────────────────────────────────────────────────────────────
+
+@router.get("/health/pipeline")
+async def pipeline_health(db: AsyncSession = Depends(get_db)):
+    """Extended pipeline health: last refresh, active signals, error count."""
+    try:
+        # Last OHLC ingestion
+        last_candle_stmt = select(func.max(OHLCCandle.timestamp))
+        last_candle_res = await db.execute(last_candle_stmt)
+        last_refresh_at = last_candle_res.scalar()
+
+        # Active signals count
+        active_stmt = select(func.count()).where(Signal.is_active == True)
+        active_res = await db.execute(active_stmt)
+        active_count = active_res.scalar() or 0
+
+        stale = False
+        if last_refresh_at:
+            age_minutes = (datetime.utcnow() - last_refresh_at.replace(tzinfo=None)).total_seconds() / 60
+            stale = age_minutes > 30
+
+        return {
+            "status": "healthy",
+            "last_refresh_at": last_refresh_at.isoformat() if last_refresh_at else None,
+            "active_signal_count": active_count,
+            "data_stale": stale,
+            "version": "1.0.0"
+        }
+    except Exception as e:
+        return {"status": "degraded", "error": str(e)}
+
+
+# ── Helpers ───────────────────────────────────────────────────────────────────
+
+def _signal_to_dict(s: Signal) -> dict:
+    return {
+        "id": str(s.id),
+        "symbol": s.symbol,
+        "signal_type": s.signal_type,
+        "pattern_id": str(s.pattern_id) if s.pattern_id else None,
+        "win_rate_5d": float(s.win_rate_5d) if s.win_rate_5d else None,
+        "win_rate_15d": float(s.win_rate_15d) if s.win_rate_15d else None,
+        "confluence_score": s.confluence_score,
+        "high_confluence": s.high_confluence,
+        "signal_rank": float(s.signal_rank) if s.signal_rank else None,
+        "one_liner": s.one_liner,
+        "paragraph_explanation": s.paragraph_explanation,
+        "low_confidence": s.low_confidence,
+        "is_active": s.is_active,
+        "created_at": s.created_at.isoformat() if s.created_at else None,
+        "source_reference": s.source_reference,
+    }
+
+
+# ── Signal Expiry Job (called from scheduler in main.py) ──────────────────────
+
+async def expire_old_signals():
+    """Sets is_active=FALSE for signals older than 5 trading days (~7 calendar days)."""
+    cutoff = datetime.utcnow() - timedelta(days=7)
+    async with AsyncSessionLocal() as session:
+        stmt = select(Signal).where(Signal.created_at < cutoff, Signal.is_active == True)
+        result = await session.execute(stmt)
+        old_signals = result.scalars().all()
+        for sig in old_signals:
+            sig.is_active = False
+        await session.commit()
+        if old_signals:
+            print(f"[expiry] Marked {len(old_signals)} signals as inactive.")
