@@ -1,0 +1,1228 @@
+SOFTWARE REQUIREMENTS SPECIFICATION
+ET AI Hackathon 2026 — Problem Statement 6
+AI for the Indian Investor
+Chart Pattern Intelligence + Opportunity Radar
+Product Name InvestorRadar
+Version 1.0
+Date March 21, 2026
+Status Draft
+Deadline March 29, 2026 — 14:00 IST
+Hackathon ET AI Hackathon 2026
+Partners Avataar.ai, Unstop
+
+SRS — AI for the Indian Investor ET AI Hackathon 2026 | PS6
+Table of Contents 
+Table of Contents	
+
+3
+1. Introduction	
+
+10
+1.1 Purpose	
+
+10
+This Software Requirements Speciﬁcation (SRS) deﬁnes the complete 
+functional, non-functional, and system requirements for InvestorRadar, an 
+AI-powered market intelligence platform built for ET AI Hackathon 2026, 
+Problem Statement 6: AI for the Indian Investor.	
+
+10
+India has over 14 crore demat account holders. The vast majority make 
+decisions based on tips and gut feel rather than data. InvestorRadar 
+provides institutional-grade chart pattern intelligence and corporate event 
+signal detection in plain-English, source-cited format that any retail 
+investor can act on.	
+
+10
+1.2 Scope	
+
+10
+InvestorRadar comprises two core modules:	
+
+10
+1.3 Deﬁnitions and Acronyms	
+
+10
+1.4 References	
+
+11
+1.5 Document Overview	
+
+11
+Section 2 provides the overall product description and context. Section 
+3 details all functional requirements. Section 4 covers non-functional 
+requirements. Section 5 describes the data pipeline architecture and 
+database schema. Section 6 covers the LLM and AI layer. Section 7 
+speciﬁes frontend and UI requirements. Section 8 lists system constraints. 
+Section 9 presents the 9-day development plan with team assignments. 
+Page  of 335
+SRS — AI for the Indian Investor ET AI Hackathon 2026 | PS6
+Section 10 provides the quantiﬁed impact model.	
+
+11
+2. Overall Description	
+
+12
+2.1 Product Perspective	
+
+12
+InvestorRadar is a standalone web application that aggregates publicly 
+available market data from NSE, BSE, and SEBI, processes it through a 
+multi-layer AI pipeline, and presents actionable, cited investment signals 
+through an intuitive browser-based interface. It interacts with the following 
+external systems:	
+
+12
+2.2 Product Functions — High-Level Summary	
+
+12
+2.3 User Classes and Characteristics	
+
+12
+2.4 Operating Environment	
+
+13
+2.5 Design and Implementation Constraints	
+
+13
+2.6 Assumptions and Dependencies	
+
+13
+3. Functional Requirements	
+
+14
+3.1 Data Ingestion Pipeline	
+
+14
+3.1.1 OHLCV Data Fetching	
+
+14
+3.1.2 Data Normalisation	
+
+14
+3.1.3 Corporate Events Ingestion	
+
+15
+Page  of 435
+SRS — AI for the Indian Investor ET AI Hackathon 2026 | PS6
+3.2 Chart Pattern Detection	
+
+15
+3.2.1 Pattern Detection Engine	
+
+15
+3.3 Backtesting Engine	
+
+16
+3.4 Conﬂuence Scoring	
+
+16
+3.5 Opportunity Radar	
+
+17
+3.6 LLM Signal Explainer	
+
+18
+3.7 Signal Feed and API	
+
+18
+3.7.1 Signal Feed Requirements	
+
+18
+3.7.2 REST API Endpoint Speciﬁcations	
+
+19
+4. Non-Functional Requirements	
+
+20
+4.1 Performance	
+
+20
+4.2 Reliability	
+
+20
+4.3 Security	
+
+20
+4.4 Maintainability	
+
+21
+4.5 Usability	
+
+21
+5. Data Pipeline Architecture	
+
+22
+Page  of 535
+SRS — AI for the Indian Investor ET AI Hackathon 2026 | PS6
+5.1 Pipeline Layer Summary	
+
+22
+5.2 Database Schema	
+
+22
+5.2.1 ohlcv_candles (TimescaleDB hypertable, partition key: 
+timestamp)	
+
+22
+5.2.2 detected_patterns	
+
+22
+5.2.3 backtest_results	
+
+23
+5.2.4 corporate_events	
+
+23
+5.2.5 signals	
+
+24
+6. AI and LLM Layer	
+
+25
+6.1 Model Selection	
+
+25
+The system uses the claude-sonnet-4-6 model via the Anthropic 
+Messages API for all LLM inference. This model is selected for its strong 
+instruction-following, factual grounding, and cost-eﬃcient performance at 
+hackathon scale. Model string: claude-sonnet-4-6.	
+
+25
+6.2 Prompt Architecture	
+
+25
+Each explanation request uses a two-part prompt structure:	
+
+25
+6.3 Input Context Fields	
+
+25
+6.4 Output Quality Rules	
+
+26
+Page  of 635
+SRS — AI for the Indian Investor ET AI Hackathon 2026 | PS6
+6.5 Caching Strategy	
+
+26
+All three explanation lengths are generated in a single API call and stored 
+in the signals table immediately. Redis is used as an L1 cache keyed on 
+signal_id with a 24-hour TTL for one-liner and paragraph outputs. Deep-
+dive explanations are cached in Redis with a 6-hour TTL. Cache misses on 
+/explain/:id trigger an asynchronous LLM call; the frontend receives a 202 
+Accepted response and listens via SSE for completion.	
+
+26
+7. Frontend and User Interface Requirements	
+
+27
+7.1 Technology Stack	
+
+27
+7.2 Pages and Components	
+
+27
+7.2.1 Signal Feed Page (Home — /)	
+
+27
+7.2.2 Opportunity Radar Tab	
+
+27
+7.2.3 Stock Detail Page (/stock/[symbol])	
+
+28
+7.2.4 Loading, Error, and Edge-Case States	
+
+28
+7.3 Responsive Breakpoints	
+
+28
+8. System Constraints and Limitations	
+
+29
+8.1 Data Constraints	
+
+29
+8.2 Regulatory Constraints	
+
+29
+8.3 Cost Constraints	
+
+29
+Page  of 735
+SRS — AI for the Indian Investor ET AI Hackathon 2026 | PS6
+9. Development Plan and Team Assignments	
+
+30
+9.1 Team Roles	
+
+30
+9.2 9-Day Sprint Plan	
+
+30
+9.3 Submission Deliverables Checklist	
+
+31
+10. Impact Model	
+
+32
+10.1 Problem Scale	
+
+32
+10.2 Value Delivered	
+
+32
+10.3 Assumptions	
+
+32
+Appendix A: Supported TA-Lib Candlestick Patterns	
+
+33
+Appendix B: Signal Rank Formula	
+
+33
+The composite signal rank used for default feed ordering:	
+
+33
+signal_rank = win_rate_15d × (1 + 0.3 × conﬂuence_score)	
+
+34
+Example: Morning Star on HDFCBANK with win_rate_15d = 73.2 and 
+conﬂuence_score = 3 yields signal_rank = 73.2 × 1.9 = 139.08. This 
+outranks a Hammer on INFY with win_rate_15d = 68.5 and 
+conﬂuence_score = 0 (rank = 68.5), correctly surfacing the higher-
+conviction signal.	
+
+34
+Appendix C: Full Technology Stack	
+34
+Page  of 835
+SRS — AI for the Indian Investor ET AI Hackathon 2026 | PS6
+Page  of 935
+SRS — AI for the Indian Investor ET AI Hackathon 2026 | PS6
+1. Introduction 
+1.1 Purpose 
+This Software Requirements Specification (SRS) defines the complete functional, non-
+functional, and system requirements for InvestorRadar, an AI-powered market 
+intelligence platform built for ET AI Hackathon 2026, Problem Statement 6: AI for the 
+Indian Investor. 
+India has over 14 crore demat account holders. The vast majority make decisions based 
+on tips and gut feel rather than data. InvestorRadar provides institutional-grade chart 
+pattern intelligence and corporate event signal detection in plain-English, source-cited 
+format that any retail investor can act on. 
+1.2 Scope 
+InvestorRadar comprises two core modules: 
+•Chart Pattern Intelligence — real-time detection of 20+ technical patterns across all Nifty 
+500 stocks, with backtested historical win rates and AI-generated explanations. 
+•Opportunity Radar — continuous monitoring of BSE bulk/block deals, SEBI insider trade 
+disclosures, and promoter activity to surface non-obvious pre-move signals. 
+Out of scope for this submission: trade execution, brokerage integrations, regulated financial 
+advice, and user portfolio tracking. 
+1.3 Definitions and Acronyms 
+Term / Acronym Definition
+NSE National Stock Exchange of India
+BSE Bombay Stock Exchange
+SEBI Securities and Exchange Board of India
+OHLCV Open, High, Low, Close, Volume — standard candlestick price data
+TA-Lib Technical Analysis Library — open-source C library with 150+ indicator 
+functions
+CDL Prefix for TA-Lib candlestick pattern functions (e.g., CDLENGULFING)
+Win Rate Percentage of historical pattern occurrences where price rose within a 
+given horizon
+Confluence Co-occurrence of a chart pattern with a corporate event within ±3 trading 
+days
+Page  of 1035
+SRS — AI for the Indian Investor ET AI Hackathon 2026 | PS6
+1.4 References 
+•ET AI Hackathon 2026 Problem Statement Document 
+•NSE India official data portal — www.nseindia.com 
+•BSE Bulk Deal data portal — www.bseindia.com/markets/equity/EQReports/
+bulk_deals.aspx 
+•SEBI EDGAR filing portal — efiling.sebi.gov.in 
+•TA-Lib documentation — ta-lib.org 
+•yfinance Python library — pypi.org/project/yfinance 
+•Anthropic API documentation — docs.anthropic.com 
+•Economic Times Markets — economictimes.com/markets 
+1.5 Document Overview 
+Section 2 provides the overall product description and context. Section 3 details all 
+functional requirements. Section 4 covers non-functional requirements. Section 5 
+describes the data pipeline architecture and database schema. Section 6 covers the LLM 
+and AI layer. Section 7 specifies frontend and UI requirements. Section 8 lists system 
+constraints. Section 9 presents the 9-day development plan with team assignments. 
+Section 10 provides the quantified impact model. 
+Signal Rank Composite score = win_rate_15d × (1 + 0.3 × confluence_score)
+IST Indian Standard Time (UTC+5:30)
+SSE Server-Sent Events — HTTP-based server-to-client streaming protocol
+LLM Large Language Model
+Nifty 500 NSE index of the 500 largest companies by market capitalisation
+DRHP Draft Red Herring Prospectus — pre-IPO regulatory filing
+Redis In-memory key-value store used for caching LLM explanations
+TimescaleDB PostgreSQL extension optimised for time-series data
+Term / Acronym Definition
+Page  of 1135
+SRS — AI for the Indian Investor ET AI Hackathon 2026 | PS6
+2. Overall Description 
+2.1 Product Perspective 
+InvestorRadar is a standalone web application that aggregates publicly available market 
+data from NSE, BSE, and SEBI, processes it through a multi-layer AI pipeline, and 
+presents actionable, cited investment signals through an intuitive browser-based 
+interface. It interacts with the following external systems: 
+•yfinance / Yahoo Finance — 15-minute delayed OHLCV data for all NSE-listed stocks 
+•NSE India API — live quotes, market status, F&O data 
+•BSE Bulk Deal Portal — daily CSV of all bulk and block deal transactions 
+•SEBI EDGAR RSS Feeds — insider trade disclosures, promoter pledge changes, 
+corporate filings 
+•Anthropic Claude API — LLM inference for signal explanation generation 
+2.2 Product Functions — High-Level Summary 
+2.3 User Classes and Characteristics 
+Module Core Function Key Output
+Data Ingestion Continuously fetch, normalise, and store 
+price and event data
+Clean OHLCV + events in 
+TimescaleDB
+Pattern Detector Run TA-Lib CDL functions on all Nifty 500 
+stocks on every 15-min candle close
+Detected patterns with timestamp 
+and symbol
+Backtester Compute historical win rates from 3 years 
+of data for each (symbol, pattern) pair
+Win rate at 5-day and 15-day 
+horizons
+Confluence Scorer Flag chart patterns co-occurring with 
+corporate events within ±3 trading days
+Confluence score 0–3 per signal
+Signal Ranker Rank all live signals by win_rate_15d × 
+confluence multiplier
+Ordered, filterable signal feed
+LLM Explainer Generate plain-English, source-cited 
+explanation for each signal
+3 output lengths: one-liner, 
+paragraph, deep dive
+Opportunity Radar Detect anomalous promoter / insider 
+buying patterns during price declines
+Opportunity-type signals with 
+narrative
+Signal Feed UI Display ranked signals as real-time 
+interactive cards
+Live web dashboard with SSE 
+push
+Stock Detail UI Candlestick chart with pattern overlay 
+and streaming AI explanation
+Interactive chart + streaming 
+explanation panel
+Page  of 1235
+SRS — AI for the Indian Investor ET AI Hackathon 2026 | PS6
+2.4 Operating Environment 
+•Backend: Python 3.11+, FastAPI framework, deployed on Railway or Render (cloud 
+PaaS) 
+•Database: TimescaleDB (PostgreSQL 15+ with Timescale extension) 
+•Cache: Redis 7.2+ for LLM explanation caching 
+•Frontend: Next.js 14 (App Router), deployed on Vercel or same cloud PaaS 
+•LLM: Anthropic Claude API — claude-sonnet-4-6 model 
+•Supported browsers: Chrome 120+, Firefox 121+, Safari 17+, Edge 120+ 
+•Market data window: NSE trading hours 09:15 – 15:30 IST, Monday to Friday 
+2.5 Design and Implementation Constraints 
+•All data sources must be free and publicly accessible — no paid data subscriptions 
+•LLM inference must be cached per signal_id to control API costs 
+•The system operates on 15-minute delayed data from yfinance as the primary OHLCV 
+source 
+•No trade execution or SEBI-regulated financial advice may be offered 
+•All AI-generated insights must include explicit source citations and a standard disclaimer 
+•The system must be accessible via a public URL — no localhost-only demos during 
+judging 
+2.6 Assumptions and Dependencies 
+•NSE and BSE public data portals remain accessible throughout the hackathon period 
+•Anthropic API rate limits are sufficient for hackathon-scale traffic (~100 explanation 
+requests/day) 
+•TA-Lib can be compiled and installed in the deployment environment 
+•3 years of historical OHLCV data is available via yfinance for all Nifty 500 stocks 
+•BSE bulk deal CSVs are published by 18:00 IST each trading day 
+User Class Description Primary Need
+Retail Investor Demat account holder with basic 
+market knowledge. Non-technical.
+Simple, actionable signals in plain English 
+with clear rationale and source citation
+Active Trader Regular participant who reads charts 
+and follows corporate actions.
+Fast pattern alerts with historical context, 
+win rates, and confluence data
+Hackathon Judge Domain expert evaluating technical 
+depth, novelty, and demo quality.
+Clearly differentiated product with live 
+data, cited AI insights, and quantified 
+impact
+Page  of 1335
+SRS — AI for the Indian Investor ET AI Hackathon 2026 | PS6
+3. Functional Requirements 
+3.1 Data Ingestion Pipeline 
+3.1.1 OHLCV Data Fetching 
+3.1.2 Data Normalisation 
+ID Requirement Priority
+FR-DI-01 The system shall fetch 1-minute OHLCV candlestick data for all Nifty 
+500 stocks via yfinance during NSE market hours (09:15–15:30 IST), 
+Monday to Friday.
+Must Have
+FR-DI-02 The system shall resample 1-minute candles into 5-minute, 15-
+minute, and 1-day aggregates using pandas resample() with 
+standard OHLCV aggregation rules (O=first, H=max, L=min, C=last, 
+V=sum).
+Must Have
+FR-DI-03 The system shall fetch and store a minimum of 3 years of historical 
+daily OHLCV data for each Nifty 500 stock on initial setup for use in 
+backtesting.
+Must Have
+FR-DI-04 The system shall use APScheduler to poll yfinance every 1 minute 
+during market hours and suspend polling outside market hours to 
+conserve API quota.
+Must Have
+FR-DI-05 All OHLCV data shall be stored in a TimescaleDB hypertable 
+partitioned on the timestamp column with a composite unique index 
+on (symbol, timestamp, timeframe).
+Must Have
+FR-DI-06 The system shall additionally query the NSE India API for live quote 
+data including last traded price, day high/low, and 52-week high/low 
+to display on stock detail pages.
+Should Have
+ID Requirement Priority
+FR-DN-01 The normaliser shall deduplicate incoming ticks on the composite 
+key (symbol, timestamp, timeframe), retaining the most recent record 
+on conflict.
+Must Have
+FR-DN-02 The normaliser shall forward-fill gaps in OHLCV data up to a 
+maximum of 5 consecutive missing candles. Gaps exceeding 5 
+candles shall be marked with an is_stale=TRUE flag and excluded 
+from pattern detection.
+Must Have
+FR-DN-03 The normaliser shall validate OHLC relationships on every candle: 
+High ≥ Open, Close, Low must hold. Invalid candles shall be logged 
+to an error_log table and excluded from downstream processing.
+Must Have
+Page  of 1435
+SRS — AI for the Indian Investor ET AI Hackathon 2026 | PS6
+3.1.3 Corporate Events Ingestion 
+3.2 Chart Pattern Detection 
+3.2.1 Pattern Detection Engine 
+FR-DN-04 The normaliser shall parse all timestamps to IST (UTC+5:30) and 
+store them as timezone-aware TIMESTAMPTZ values.
+Must Have
+FR-DN-05 The normaliser shall log every validation failure with: symbol, 
+timestamp, timeframe, failure_reason, and raw_values to enable 
+auditability.
+Should Have
+ID Requirement Priority
+ID Requirement Priority
+FR-CE-01 The system shall download BSE bulk deal and block deal CSV files 
+daily at 18:30 IST and parse them into a structured corporate_events 
+table with fields: date, symbol, client_name, buy_sell, quantity, 
+price_per_share, total_value_cr, source_reference.
+Must Have
+FR-CE-02 The system shall poll SEBI EDGAR RSS feeds every 30 minutes for 
+new insider trade disclosures and promoter pledge change filings.
+Must Have
+FR-CE-03 Each parsed corporate event shall be tagged with the corresponding 
+NSE stock symbol, resolved via a maintained BSE-to-NSE symbol 
+mapping table.
+Must Have
+FR-CE-04 The system shall identify and flag promoter buy events where total 
+acquisition value exceeds Rs. 1 crore within any 5-consecutive-
+trading-day window.
+Must Have
+FR-CE-05 The system shall flag anomalous events where a promoter or insider 
+is net-buying shares while the stock price has declined more than 
+5% over the preceding 5 trading days.
+Must Have
+FR-CE-06 A source_reference field (BSE filing URL or SEBI disclosure link) 
+must be stored for every corporate event to enable LLM citation.
+Must Have
+ID Requirement Priority
+FR-PD-01 The pattern detector shall run TA-Lib CDL functions on completed 
+candles for all Nifty 500 stocks on every 15-minute candle close 
+during market hours (09:30–15:30 IST).
+Must Have
+FR-PD-02 The detector shall evaluate all 20 patterns listed in Appendix A at 
+minimum. The pattern list shall be configurable via a JSON config file 
+without code changes.
+Must Have
+Page  of 1535
+SRS — AI for the Indian Investor ET AI Hackathon 2026 | PS6
+3.3 Backtesting Engine 
+3.4 Confluence Scoring 
+FR-PD-03 TA-Lib CDL functions return +100 (bullish), -100 (bearish), or 0 (no 
+pattern). All non-zero results shall be stored with: symbol, 
+pattern_name, signal_direction, candle_timestamp, timeframe.
+Must Have
+FR-PD-04 The detector shall maintain a rolling window of at least 50 completed 
+candles per symbol per timeframe in memory to provide TA-Lib with 
+sufficient history. Only 15-minute and daily timeframes shall be 
+processed.
+Must Have
+FR-PD-05 Daily timeframe patterns shall additionally be checked for trend 
+alignment with the 20-day moving average before storage (pattern 
+direction must agree with trend direction).
+Should Have
+ID Requirement Priority
+ID Requirement Priority
+FR-BT-01 The backtester shall, for every (symbol, pattern_name) pair, scan 3 
+years of historical daily OHLCV data to identify all prior occurrences 
+of that pattern on that stock.
+Must Have
+FR-BT-02 For each historical occurrence, the backtester shall record: the 
+closing price on detection day, and the closing price at 5 trading days 
+and 15 trading days forward.
+Must Have
+FR-BT-03 The backtester shall compute and store: win_rate_5d (% of 
+occurrences where 5-day forward close > detection close), 
+win_rate_15d, avg_gain_5d (mean % gain), avg_gain_15d, and 
+sample_count per (symbol, pattern) pair.
+Must Have
+FR-BT-04 Results with sample_count < 5 shall be flagged as 
+low_confidence=TRUE and shall not be displayed in the default 
+signal feed without an explicit user filter override.
+Must Have
+FR-BT-05 The backtesting computation shall run once on initial setup and 
+automatically re-run weekly on Sunday nights to incorporate the 
+latest historical data.
+Should Have
+FR-BT-06 The system shall store the last_computed_at timestamp for each 
+backtest result to display data freshness to users.
+Should Have
+Page  of 1635
+SRS — AI for the Indian Investor ET AI Hackathon 2026 | PS6
+3.5 Opportunity Radar 
+ID Requirement Priority
+FR-CS-01 For every detected chart pattern, the confluence scorer shall query 
+the corporate_events table for any event on the same symbol within 
+a ±3 trading day window centred on the pattern's candle_timestamp.
+Must Have
+FR-CS-02 The confluence scorer shall assign a confluence_score as follows: 0 
+= no corporate event found; 1 = block deal < Rs. 1 crore; 2 = bulk 
+deal or insider buy ≥ Rs. 1 crore; 3 = promoter buy during price 
+decline (anomaly flag active).
+Must Have
+FR-CS-03 The composite signal_rank shall be computed as: win_rate_15d × (1 
++ 0.3 × confluence_score). This value is stored in the signals table 
+and used for default feed ordering.
+Must Have
+FR-CS-04 Signals with confluence_score ≥ 2 shall be tagged with a 
+high_confluence flag and displayed with a distinct visual badge in the 
+UI.
+Must Have
+FR-CS-05 The associated corporate event IDs shall be stored in the 
+signals.event_ids array to enable the LLM explainer and UI to 
+retrieve and display full event context.
+Must Have
+ID Requirement Priority
+FR-OR-01 The Opportunity Radar shall run daily at 19:00 IST after BSE bulk 
+deal data has been ingested and processed.
+Must Have
+FR-OR-02 The radar shall detect and generate opportunity signals for the 
+following anomaly patterns: (a) Promoter net purchase ≥ Rs. 5 crore 
+while stock is down ≥ 5% over the preceding 5 trading days. (b) 
+Insider net-buy on 3 or more consecutive trading days within any 10-
+day window. (c) Block deal where the buyer is a known FII or DII 
+purchasing at a premium ≥ 1% above the previous day's close. (d) 
+Promoter pledge reduction ≥ 10% of total pledged shares within any 
+30-day window.
+Must Have
+FR-OR-03 For each opportunity signal, the system shall compute a historical 
+base rate: the percentage of prior instances where a similar anomaly 
+on a similar-cap stock was followed by outperformance of Nifty 50 
+over 30 days.
+Must Have
+FR-OR-04 Opportunity signals shall be stored with signal_type='opportunity' in 
+the signals table and shall appear exclusively in the dedicated 
+Opportunity Radar tab in the UI.
+Must Have
+FR-OR-05 Every opportunity signal shall include a source_reference field 
+containing the BSE filing URL or SEBI disclosure link from which the 
+triggering event was sourced.
+Must Have
+Page  of 1735
+SRS — AI for the Indian Investor ET AI Hackathon 2026 | PS6
+3.6 LLM Signal Explainer 
+3.7 Signal Feed and API 
+3.7.1 Signal Feed Requirements 
+ID Requirement Priority
+FR-LLM-01 For every signal, the system shall generate an LLM explanation via 
+the Anthropic Claude API using a structured prompt containing: 
+symbol, company name, sector, pattern name, signal direction, 
+win_rate_5d, win_rate_15d, avg_gain_15d, sample_count, 
+confluence_score, and all associated corporate events with their 
+source references.
+Must Have
+FR-LLM-02 The LLM shall generate three output variants per signal: (a) One-
+liner (max 20 words) for the signal feed card. (b) Paragraph (80–120 
+words) for the signal detail view. (c) Deep dive (300–400 words) for 
+the full analysis panel.
+Must Have
+FR-LLM-03 Every LLM-generated explanation shall include at least one explicit 
+source citation in the standardised format: [Source: <source_name>, 
+<date>].
+Must Have
+FR-LLM-04 LLM explanations shall be cached in the signals table against 
+signal_id. Cached explanations shall be served on all subsequent 
+requests without re-calling the API.
+Must Have
+FR-LLM-05 Paragraph and deep-dive explanations shall be streamed to the 
+frontend via Server-Sent Events (SSE) for token-by-token 
+progressive display.
+Must Have
+FR-LLM-06 All LLM outputs shall conclude with the mandatory disclaimer: 'This 
+is not financial advice. Past patterns do not guarantee future results. 
+Please consult a registered financial advisor before making 
+investment decisions.'
+Must Have
+FR-LLM-07 The LLM system prompt shall explicitly instruct the model to: (a) 
+ground every claim in the provided data, (b) avoid hallucinating 
+statistics, (c) define any financial jargon on first use, and (d) write at 
+a level accessible to a Class 12 student.
+Must Have
+ID Requirement Priority
+FR-SF-01 The /signals API endpoint shall return a paginated, ranked list of 
+active signals ordered by signal_rank descending, defaulting to 20 
+results per page.
+Must Have
+Page  of 1835
+SRS — AI for the Indian Investor ET AI Hackathon 2026 | PS6
+3.7.2 REST API Endpoint Specifications 
+FR-SF-02 The feed shall support the following filters: signal_type (pattern / 
+opportunity / all), direction (bullish / bearish / all), min_win_rate 
+(numeric threshold), min_confluence (0–3), sector (NSE sector 
+string), page, limit.
+Must Have
+FR-SF-03 The system shall push new signals to subscribed frontend clients via 
+the /alerts SSE endpoint within 2 minutes of detection during market 
+hours.
+Must Have
+FR-SF-04 Signals older than 5 trading days shall be automatically marked 
+is_active=FALSE and excluded from the default feed (accessible via 
+an archived=true filter).
+Must Have
+ID Requirement Priority
+MethodEndpoint Description
+GET /signals Ranked, paginated signal feed. Filters: type, direction, 
+min_win_rate, min_confluence, sector, page, limit.
+GET /signals/{signal_id} Full signal detail: backtest metrics, confluence events, cached 
+paragraph explanation.
+GET /stock/{symbol} OHLCV data for symbol. Query params: timeframe (1m/5m/
+15m/1d), from, to (ISO8601).
+GET /stock/{symbol}/patterns All detected patterns for symbol within date range. Params: 
+from, to.
+GET /stock/{symbol}/events All corporate events for symbol within date range. Params: 
+from, to.
+GET /explain/{signal_id} SSE stream of deep-dive LLM explanation. Serves cached 
+result if available.
+GET /alerts SSE endpoint — pushes new signal events to subscribed 
+clients in real time.
+GET /health Pipeline health check: status, last_refresh_at, 
+active_signal_count, pipeline_errors.
+Page  of 1935
+SRS — AI for the Indian Investor ET AI Hackathon 2026 | PS6
+4. Non-Functional Requirements 
+4.1 Performance 
+4.2 Reliability 
+4.3 Security 
+ID Requirement Target
+NFR-P-01 GET /signals response time (p95) < 500ms
+NFR-P-02 GET /stock/:symbol response time (p95) < 300ms
+NFR-P-03 Full Nifty 500 pattern detection cycle time per 15-min candle 
+close
+< 60 seconds
+NFR-P-04 LLM one-liner generation time (first byte) < 2 seconds
+NFR-P-05 LLM deep-dive SSE streaming — time to first token < 3 seconds
+NFR-P-06 Frontend Largest Contentful Paint on 4G < 2.5 seconds
+NFR-P-07 Daily Opportunity Radar computation time for full Nifty 500 
+event scan
+< 5 minutes
+ID Requirement Target
+NFR-R-01 System uptime during hackathon judging window (March 29) 99%+
+NFR-R-02 Data pipeline shall implement retry with exponential backoff on 
+yfinance / NSE API failures
+Max 3 retries, 2^n 
+second delay
+NFR-R-03 If the LLM API is unavailable, the system shall serve cached 
+explanations and mark affected signals as 'explanation 
+pending' rather than failing.
+Graceful degradation
+NFR-R-04 Pipeline health shall be exposed via /health and automatically 
+checked every 5 minutes with alerting on consecutive failures.
+Auto-alert on failure
+ID Requirement Priority
+NFR-S-01 All API keys (Anthropic, any paid data source) must be stored as 
+environment variables and never committed to the public GitHub 
+repository. The repository must include a .gitignore rule for .env files.
+Must Have
+NFR-S-02 All public endpoints shall implement rate limiting at 60 requests per 
+minute per IP address.
+Must Have
+Page  of 2035
+SRS — AI for the Indian Investor ET AI Hackathon 2026 | PS6
+4.4 Maintainability 
+•All data source connectors shall be implemented as separate modules so any single 
+source can be swapped without affecting others. 
+•The list of TA-Lib patterns to detect shall be configurable via a JSON config file — adding 
+a new pattern requires no code change. 
+•All database schema changes shall be versioned using Alembic migration scripts with 
+descriptive names. 
+•The project shall include a Docker Compose file enabling any team member to run the 
+full stack locally with a single command (docker compose up). 
+4.5 Usability 
+•A first-time user with no financial background shall understand the purpose of a signal 
+card within 30 seconds of landing on the page. 
+•All technical terms (pattern name, win rate, confluence, signal rank) shall include tooltip 
+or inline help text accessible without leaving the page. 
+•The interface shall be fully functional on mobile viewports with a minimum width of 
+375px. 
+•Signal explanations shall be written at a reading level accessible to a Class 12 student 
+with basic investing knowledge. 
+NFR-S-03 The /explain/:id endpoint shall additionally limit re-generation 
+requests to 5 per signal per hour per IP to prevent LLM cost abuse.
+Must Have
+ID Requirement Priority
+Page  of 2135
+SRS — AI for the Indian Investor ET AI Hackathon 2026 | PS6
+5. Data Pipeline Architecture 
+5.1 Pipeline Layer Summary 
+5.2 Database Schema 
+5.2.1 ohlcv_candles (TimescaleDB hypertable, partition key: timestamp) 
+5.2.2 detected_patterns 
+Layer Components Technology Schedule
+Source yfinance, NSE API, BSE bulk 
+deal portal, SEBI RSS
+Python requests, yfinance 
+library
+Per component 
+cadence
+Ingest Scheduler, Normaliser APScheduler, pandas, 
+SQLAlchemy
+1-min ticks; 30-min 
+events; 18:30 daily 
+CSV
+Compute OHLCV Processor, Pattern 
+Detector, Backtester, Confluence 
+Scorer, Opportunity Radar
+TA-Lib, pandas, numpy On 15-min candle 
+close; daily 19:00 IST
+Store Time-series store, Signal store, 
+Events store, LLM cache
+TimescaleDB, Redis Persistent; Redis 
+24hr TTL
+Column Type Notes
+symbol VARCHAR(20) NSE ticker (e.g., RELIANCE, HDFCBANK). 
+Part of composite unique index.
+timestamp TIMESTAMPTZ Candle open time in IST. Partition key.
+timeframe VARCHAR(5) 1m, 5m, 15m, or 1d
+open NUMERIC(12,4) Opening price
+high NUMERIC(12,4) High price for the period
+low NUMERIC(12,4) Low price for the period
+close NUMERIC(12,4) Closing price
+volume BIGINT Total volume traded in the period
+is_stale BOOLEAN TRUE if forward-filled beyond 5 consecutive 
+missing candles
+Page  of 2235
+SRS — AI for the Indian Investor ET AI Hackathon 2026 | PS6
+5.2.3 backtest_results 
+5.2.4 corporate_events 
+Column Type Notes
+id UUID PRIMARY KEYAuto-generated unique detection event ID
+symbol VARCHAR(20) NSE ticker
+pattern_name VARCHAR(50) TA-Lib function name (e.g., CDLENGULFING)
+signal_direction VARCHAR(10) bullish or bearish
+timeframe VARCHAR(5) 15m or 1d
+detected_at TIMESTAMPTZ Candle timestamp on which pattern was 
+detected
+created_at TIMESTAMPTZ Wall-clock time when detection was written to 
+DB
+Column Type Notes
+symbol VARCHAR(20) NSE ticker. Composite PK with pattern_name.
+pattern_name VARCHAR(50) TA-Lib function name. Composite PK with 
+symbol.
+win_rate_5d NUMERIC(5,2) % of historical occurrences with positive 5-day 
+return
+win_rate_15d NUMERIC(5,2) % of historical occurrences with positive 15-day 
+return
+avg_gain_5d NUMERIC(7,4) Average % gain at the 5-day horizon across all 
+occurrences
+avg_gain_15d NUMERIC(7,4) Average % gain at the 15-day horizon
+sample_count INTEGER Number of historical occurrences found in 3-
+year window
+low_confidence BOOLEAN TRUE if sample_count < 5
+last_computed_at TIMESTAMPTZ Timestamp of last backtest computation
+Column Type Notes
+id UUID PRIMARY KEYUnique event ID
+symbol VARCHAR(20) NSE ticker
+event_type VARCHAR(30) bulk_deal, block_deal, insider_buy, insider_sell, 
+promoter_pledge_reduction
+event_date DATE Date of the event (IST)
+Page  of 2335
+SRS — AI for the Indian Investor ET AI Hackathon 2026 | PS6
+5.2.5 signals 
+party_name VARCHAR(200) Name of buyer or seller
+quantity BIGINT Number of shares transacted
+price_per_share NUMERIC(12,4) Transaction price per share
+total_value_cr NUMERIC(12,4) Total transaction value in crores
+is_anomaly BOOLEAN TRUE if anomaly detector flagged this event
+source_reference TEXT Full URL of BSE or SEBI filing
+raw_data JSONB Complete parsed record from source for 
+auditability
+Column Type Notes
+Column Type Notes
+id UUID PRIMARY KEYUnique signal ID
+symbol VARCHAR(20) NSE ticker
+signal_type VARCHAR(20) pattern or opportunity
+pattern_id UUID FK FK to detected_patterns. NULL for opportunity 
+signals.
+event_ids UUID[] Array of FK references to corporate_events
+win_rate_5d NUMERIC(5,2) Copied from backtest_results at signal creation
+win_rate_15d NUMERIC(5,2) Copied from backtest_results at signal creation
+confluence_score INTEGER 0–3 as defined in FR-CS-02
+high_confluence BOOLEAN TRUE if confluence_score ≥ 2
+signal_rank NUMERIC(8,4) win_rate_15d × (1 + 0.3 × confluence_score)
+one_liner TEXT Cached LLM one-liner explanation (max 20 
+words)
+paragraph_explanation TEXT Cached LLM paragraph explanation (80–120 
+words)
+deep_dive TEXT Cached LLM deep-dive explanation (300–400 
+words)
+source_reference TEXT Primary source URL cited in LLM output
+low_confidence BOOLEAN TRUE if backtest sample_count < 5
+is_active BOOLEAN FALSE if signal is more than 5 trading days old
+created_at TIMESTAMPTZ Signal creation timestamp
+Page  of 2435
+SRS — AI for the Indian Investor ET AI Hackathon 2026 | PS6
+6. AI and LLM Layer 
+6.1 Model Selection 
+The system uses the claude-sonnet-4-6 model via the Anthropic Messages API for all 
+LLM inference. This model is selected for its strong instruction-following, factual 
+grounding, and cost-efficient performance at hackathon scale. Model string: claude-
+sonnet-4-6. 
+6.2 Prompt Architecture 
+Each explanation request uses a two-part prompt structure: 
+•System prompt: establishes persona (data-driven Indian market analyst), output format 
+constraints (three length variants), citation requirements, disclaimer obligation, and 
+grounding rules (no hallucinated statistics). 
+•User prompt: injects all quantitative signal data as a structured JSON block, including all 
+fields from the signals table and associated corporate events. 
+6.3 Input Context Fields 
+Field Source Example Value
+symbol detected_patterns HDFCBANK
+company_name NSE symbol master HDFC Bank Ltd.
+sector NSE symbol master Financial Services
+pattern_name detected_patterns CDLMORNINGSTAR
+pattern_common_name Pattern config JSON Morning Star
+signal_direction detected_patterns bullish
+detected_at detected_patterns 2026-03-19 14:45 IST
+timeframe detected_patterns 15m
+win_rate_5d backtest_results 61.4
+win_rate_15d backtest_results 73.2
+avg_gain_15d backtest_results 4.8
+sample_count backtest_results 41
+confluence_score signals 3
+events corporate_events [{type: promoter_buy, value_cr: 45.2, 
+date: 2026-03-17, source_url: 
+bseindia.com/...}]
+Page  of 2535
+SRS — AI for the Indian Investor ET AI Hackathon 2026 | PS6
+6.4 Output Quality Rules 
+•All numerical claims must come from the injected context data — the LLM must not 
+hallucinate statistics. 
+•Every output must cite at least one source using the format: [Source: <source_name>, 
+<date>]. 
+•The one-liner must include the pattern common name, win rate at 15 days, and time 
+horizon in plain English. 
+•The mandatory disclaimer must appear as the final sentence of every paragraph and 
+deep-dive output. 
+•LLM outputs must not use financial jargon without immediately defining it for a general 
+audience. 
+6.5 Caching Strategy 
+All three explanation lengths are generated in a single API call and stored in the signals 
+table immediately. Redis is used as an L1 cache keyed on signal_id with a 24-hour TTL 
+for one-liner and paragraph outputs. Deep-dive explanations are cached in Redis with a 
+6-hour TTL. Cache misses on /explain/:id trigger an asynchronous LLM call; the frontend 
+receives a 202 Accepted response and listens via SSE for completion. 
+Page  of 2635
+SRS — AI for the Indian Investor ET AI Hackathon 2026 | PS6
+7. Frontend and User Interface Requirements 
+7.1 Technology Stack 
+7.2 Pages and Components 
+7.2.1 Signal Feed Page (Home — /) 
+•Header: live market status indicator (green badge = open, red = closed), last data refresh 
+timestamp, alert bell icon that pulses on new signal via SSE. 
+•Filter bar: signal type toggle (All / Pattern / Opportunity), direction toggle (All / Bullish / 
+Bearish), minimum win rate range slider (0–100), minimum confluence selector (0–3), 
+sector dropdown. 
+•Signal cards in a responsive grid (1 / 2 / 3 columns at mobile / tablet / desktop 
+breakpoints). 
+•Each signal card displays: company name + NSE symbol, sector badge, pattern 
+common name, win rate badge (green ≥ 65%, amber 50–64%, red < 50%), confluence 
+badge (filled icon if score ≥ 2, with score number), signal direction arrow, one-liner LLM 
+explanation, detected-at timestamp (relative: '14 mins ago'), and 'View Detail' CTA link. 
+•Infinite scroll pagination — 20 signals loaded per page, next page fetched on scroll to 
+bottom. 
+•Skeleton loaders shown in place of cards while the initial feed is loading. 
+7.2.2 Opportunity Radar Tab 
+•Accessible via a tab toggle on the home page, URL: /?tab=radar. 
+•Opportunity cards use an amber left-border accent to visually differentiate from pattern 
+signals. 
+•Each card shows: anomaly type label (e.g., 'Promoter buy during decline'), company 
+name, event summary (e.g., 'Promoter acquired Rs. 45.2Cr while stock fell 8.3% in 5 
+Component Technology Rationale
+Framework Next.js 14 (App Router) SSR for fast initial load, file-based routing, API 
+routes
+Charting lightweight-charts 
+(TradingView)
+Performant candlestick charts, pattern 
+annotations, small bundle
+State / Data FetchingTanStack Query (React 
+Query)
+Automatic caching, background polling, SSE 
+integration
+Styling Tailwind CSS Rapid development, responsive utilities, no 
+CSS conflicts
+Realtime EventSource API (SSE) Live signal push from /alerts, streaming LLM 
+from /explain
+Page  of 2735
+SRS — AI for the Indian Investor ET AI Hackathon 2026 | PS6
+days'), historical base rate ('Outperformed Nifty 30-day in 68% of similar cases'), source 
+citation hyperlink to BSE/SEBI filing, and LLM one-liner. 
+7.2.3 Stock Detail Page (/stock/[symbol]) 
+•Candlestick chart rendered with lightweight-charts. Default view: 15-minute timeframe for 
+current trading day. Timeframe toggle buttons: 5m, 15m, 1D. 
+•Pattern detection markers rendered directly on chart candles at detection_at timestamp: 
+upward triangle (green) for bullish patterns, downward triangle (red) for bearish. Hovering 
+shows: pattern name, win_rate_15d, and detection time in a tooltip. 
+•Signal detail panel below chart: full backtest metrics table (win rate 5d/15d, avg gain 5d/
+15d, sample count, data freshness), confluence events list (each event shows type, party 
+name, value, source link), and streaming LLM paragraph explanation. 
+•'Deep Dive' expandable section that triggers GET /explain/:id and streams the full 300–
+400-word analysis token by token. 
+•Disclaimer text displayed prominently below the explanation panel in muted styling. 
+•Low-confidence badge displayed on signal if low_confidence=TRUE with tooltip 
+explaining the sample count limitation. 
+7.2.4 Loading, Error, and Edge-Case States 
+•Signal feed cards must display skeleton loaders while data is fetching — no blank or 
+layout-shift states. 
+•If data pipeline is stale (last refresh > 30 minutes before current time), a dismissible 
+warning banner must appear: 'Data may be delayed — last updated [timestamp]'. 
+•If LLM explanation is being generated, the explanation panel must show a pulsing cursor 
+animation with text 'Generating analysis…'. 
+•All API error responses (4xx, 5xx) must display a user-friendly message with a retry 
+button — never a raw error code or JSON blob. 
+•Empty state: if no signals match the active filters, show a descriptive empty state with 
+filter reset CTA. 
+7.3 Responsive Breakpoints 
+Breakpoint Min Width Signal Feed Layout Chart Height
+Mobile 375px Single column feed 250px
+Tablet 768px Two column feed 350px
+Desktop 1280px Three column feed 450px
+Page  of 2835
+SRS — AI for the Indian Investor ET AI Hackathon 2026 | PS6
+8. System Constraints and Limitations 
+8.1 Data Constraints 
+•yfinance data is delayed by approximately 15 minutes. The system does not provide real-
+time tick data and must label all price data with its delay. 
+•BSE bulk deal data is only available after market close (~18:00 IST). Opportunity Radar 
+signals based on this data are generated after hours. 
+•SEBI EDGAR filings may have processing delays of up to 24 hours after the actual 
+corporate event. 
+•TA-Lib pattern functions require a minimum of 1–5 candles of history depending on the 
+pattern. Stocks with insufficient history (recent IPOs, illiquid stocks) will yield fewer 
+detected patterns. 
+•Backtest sample counts will be low for rare patterns on illiquid stocks. These are flagged 
+low_confidence=TRUE as per FR-BT-04. 
+8.2 Regulatory Constraints 
+•InvestorRadar does not constitute regulated financial advice under SEBI (Investment 
+Advisers) Regulations, 2013. 
+•All AI-generated content must include the disclaimer: 'This is not financial advice. Past 
+patterns do not guarantee future results. Please consult a registered financial advisor 
+before making investment decisions.' 
+•The platform must not use non-public or material non-public information (MNPI). All data 
+sources must be publicly accessible without authentication or privileged access. 
+8.3 Cost Constraints 
+•LLM API calls are limited to explanation generation only — no real-time inference on tick 
+data. 
+•Explanation caching in Redis and TimescaleDB must be implemented before any LLM 
+feature is deployed. 
+•The system must be deployable within the free or low-cost tier of Railway, Render, or 
+equivalent PaaS for the duration of the hackathon. 
+Page  of 2935
+SRS — AI for the Indian Investor ET AI Hackathon 2026 | PS6
+9. Development Plan and Team Assignments 
+9.1 Team Roles 
+9.2 9-Day Sprint Plan 
+Member Role Primary Responsibilities
+Member B Backend / Data 
+Engineer
+Data ingestion pipeline, normaliser, APScheduler, database 
+schema, Alembic migrations, Docker Compose, deployment 
+infrastructure, README
+Member M ML / LLM Engineer TA-Lib pattern detector, backtesting engine, confluence 
+scorer, Opportunity Radar anomaly detector, LLM prompt 
+engineering, impact model, architecture document, judge 
+Q&A prep
+Member F Full-stack Developer FastAPI REST API, SSE endpoints, /explain streaming, API-
+to-frontend integration, public deployment on Railway/
+Render, GitHub repo management, smoke testing
+Member U UI / Frontend DesignerNext.js frontend, signal feed page, Opportunity Radar tab, 
+stock detail page, lightweight-charts integration, pattern 
+markers, mobile responsiveness, skeleton loaders, 3-minute 
+pitch video production
+DayDate Phase Milestone / Key Deliverables
+1 Sat 21 Mar Foundation Live OHLCV data ingesting into TimescaleDB. FastAPI 
+scaffold with stub endpoints. Next.js shell deployed. 
+Wireframes finalised.
+2 Sun 22 Mar Foundation Backtester producing win rates for 1 stock. Confluence 
+scorer operational. Real data rendering in signal feed UI.
+3 Mon 23 Mar Intelligence LLM explainer generating cited explanations. Candlestick 
+chart with pattern overlay live on stock detail page.
+4 Tue 24 Mar Intelligence Opportunity Radar detecting anomaly signals. Radar tab 
+live in UI. SSE alert push working.
+5 Wed 25 Mar Buffer / Flex Pipeline hardened (retry logic, error logging). Full Nifty 500 
+coverage. Public deployment accessible. UI polish pass.
+6 Thu 26 Mar Polish Full demo run-through with full team. Impact model written 
+with real numbers. Judge Q&A answers prepared. Demo 
+script scripted and timed at ≤3 minutes.
+Page  of 3035
+SRS — AI for the Indian Investor ET AI Hackathon 2026 | PS6
+9.3 Submission Deliverables Checklist 
+7 Fri 27 Mar Submission Prep3-minute pitch video recorded with live data. README and 
+architecture document completed and reviewed.
+8 Sat 28 Mar Submission PrepFinal smoke test on public URL. GitHub release v1.0 
+tagged. Submission package assembled and verified.
+9 Sun 29 Mar Submission Submit on Unstop by 14:00 IST. Full team on standby for 
+any last-minute issues.
+DayDate Phase Milestone / Key Deliverables
+Deliverable Owner Due
+Public GitHub repository with full source code and commit 
+history
+Member F Day 7
+README with setup instructions, architecture overview, and 
+data source list
+Member B Day 7
+3-minute pitch video showing problem, solution, and live 
+demo with real data
+Member U Day 7
+Architecture document (1–2 pages): agent roles, data flow, 
+error handling, tool integrations
+Member M Day 7
+Impact model: quantified business impact with stated 
+assumptions and calculations
+Member M Day 6
+Live public URL accessible without login or special 
+configuration
+Member F Day 5
+Docker Compose file enabling local setup with single 
+command
+Member B Day 5
+Page  of 3135
+SRS — AI for the Indian Investor ET AI Hackathon 2026 | PS6
+10. Impact Model 
+10.1 Problem Scale 
+10.2 Value Delivered 
+10.3 Assumptions 
+•Win rates from backtesting are based on historical data and do not guarantee future 
+performance. All win rates carry the mandatory disclaimer. 
+•1% adoption is conservative given ET Markets reaches 100M+ users monthly and this 
+product is a natural extension of ET's existing Market ChatGPT product. 
+•Time savings assume the platform surfaces the top 10 relevant signals in under 5 
+minutes, replacing 2+ hours of manual chart reading, news scanning, and filing review. 
+•The impact model does not quantify return improvement from better-informed decisions 
+— this would represent an additional and likely larger value dimension. 
+Metric Value Source
+Active demat accounts in India > 14 crore (140 million) SEBI Annual Report 2024–25
+Retail investors with no financial 
+plan
+~95% SEBI Investor Survey 2024
+Average time spent on manual 
+research per week
+~2.5 hours Industry estimate
+Annual cost of a SEBI-registered 
+investment advisor
+Rs. 25,000+ per year Market rate (HNI segment)
+Investors who can afford a 
+registered advisor
+< 5% SEBI data (HNI threshold)
+Benefit Calculation Estimated Value
+Research time saved per 
+investor per week
+2.5 hrs reduced to ~0.5 hrs via AI signal 
+feed (80% reduction)
+2 hrs / week / investor
+Aggregate time saved at 1% 
+adoption
+1.4M users × 2 hrs × 52 weeks 145.6 million hours / year
+Cost of equivalent financial 
+advice replaced
+1.4M users × Rs. 25,000 advisor fee Rs. 35,000 crore / year in 
+advisor value democratised
+Signal accuracy (backtested)Average win_rate_15d across top-ranked 
+signals estimated 65–75%
+Strong positive expected 
+value vs. random selection
+Page  of 3235
+SRS — AI for the Indian Investor ET AI Hackathon 2026 | PS6
+Appendix A: Supported TA-Lib Candlestick Patterns 
+Appendix B: Signal Rank Formula 
+The composite signal rank used for default feed ordering: 
+TA-Lib Function Common Name Type Min 
+Candles
+CDLENGULFING Engulfing Bullish / Bearish 2
+CDLMORNINGSTAR Morning Star Bullish 3
+CDLEVENINGSTAR Evening Star Bearish 3
+CDLHAMMER Hammer Bullish 1
+CDLINVERTEDHAMMER Inverted Hammer Bullish 1
+CDLSHOOTINGSTAR Shooting Star Bearish 1
+CDLDOJI Doji Neutral / Reversal 1
+CDLDRAGONFLYDOJI Dragonfly Doji Bullish 1
+CDLGRAVESTONEDOJI Gravestone Doji Bearish 1
+CDLHARAMI Harami Bullish / Bearish 2
+CDLDARKCLOUDCOVER Dark Cloud Cover Bearish 2
+CDLPIERCING Piercing Line Bullish 2
+CDL3WHITESOLDIERS Three White Soldiers Bullish 3
+CDL3BLACKCROWS Three Black Crows Bearish 3
+CDLHANGINGMAN Hanging Man Bearish 1
+CDLSPINNINGTOP Spinning Top Neutral / Reversal 1
+CDLMARUBOZU Marubozu Bullish / Bearish 1
+CDLTASUKIGAP Tasuki Gap Bullish / Bearish 3
+CDL3INSIDE Three Inside Up / Down Bullish / Bearish 3
+CDLRISEFALL3METHODS Rising / Falling Three 
+Methods
+Bullish / Bearish 5
+Page  of 3335
+SRS — AI for the Indian Investor ET AI Hackathon 2026 | PS6
+signal_rank = win_rate_15d × (1 + 0.3 × confluence_score) 
+Example: Morning Star on HDFCBANK with win_rate_15d = 73.2 and confluence_score = 
+3 yields signal_rank = 73.2 × 1.9 = 139.08. This outranks a Hammer on INFY with 
+win_rate_15d = 68.5 and confluence_score = 0 (rank = 68.5), correctly surfacing the 
+higher-conviction signal. 
+Appendix C: Full Technology Stack 
+confluence_score Multiplier Scenario
+0 1.00× No corporate event within ±3 trading days of pattern
+1 1.30× Minor block deal < Rs. 1 crore within ±3 days
+2 1.60× Bulk deal or insider buy ≥ Rs. 1 crore within ±3 days
+3 1.90× Promoter buying during confirmed price decline 
+(anomaly flag active)
+Layer Technology Version License
+Backend language Python 3.11+ PSF (open 
+source)
+API framework FastAPI 0.110+ MIT
+Task scheduling APScheduler 3.10+ MIT
+ORM SQLAlchemy + Alembic 2.0+ MIT
+Time-series DB TimescaleDB 2.14+ Apache 2.0
+Cache Redis 7.2+ BSD
+Technical analysis TA-Lib 0.4.28+ BSD
+Market data yfinance 0.2+ Apache 2.0
+Data processing pandas + numpy 2.0+ / 1.26+ BSD
+LLM inference Anthropic Claude API claude-sonnet-4-6 Commercial
+Page  of 3435
+SRS — AI for the Indian Investor ET AI Hackathon 2026 | PS6
+Containerisation Docker + Docker Compose 24+ Apache 2.0
+Frontend framework Next.js (React) 14+ MIT
+Charting lightweight-charts 4.1+ Apache 2.0
+Styling Tailwind CSS 3.4+ MIT
+State / data fetching TanStack Query 5.0+ MIT
+Deployment Railway or Render SaaS Commercial 
+(free tier)
+Layer Technology Version License
+Page  of 3535
