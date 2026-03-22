@@ -1,25 +1,24 @@
 import json
 import logging
 from typing import AsyncGenerator
-from anthropic import AsyncAnthropic
+from groq import AsyncGroq
 from app.core.config import settings
 from sqlalchemy.orm import Session
 from app.models.signals import Signal
-# If we need async operations, use sqlalchemy.ext.asyncio.AsyncSession instead
 import redis.asyncio as redis
 
 logger = logging.getLogger(__name__)
 
 class LLMExplainerService:
     def __init__(self):
-        self.api_key = settings.ANTHROPIC_API_KEY
+        self.api_key = settings.GROQ_API_KEY
         if self.api_key:
-            self.client = AsyncAnthropic(api_key=self.api_key)
+            self.client = AsyncGroq(api_key=self.api_key)
         else:
             self.client = None
-            logger.warning("Anthropic API key is not set. LLM explanation will not work.")
+            logger.warning("Groq API key is not set. LLM explanation will not work.")
         
-        self.model = settings.CLAUDE_MODEL
+        self.model = settings.GROQ_MODEL
         self.redis_client = redis.from_url(settings.REDIS_URL, decode_responses=True)
 
     def _build_prompt(self, signal_context: dict) -> str:
@@ -59,20 +58,19 @@ Do not include any other text or markdown formatting.
         }
 
         try:
-            response = await self.client.messages.create(
+            response = await self.client.chat.completions.create(
                 model=self.model,
-                max_tokens=1000,
-                temperature=0.2,
-                system="You are an expert financial analyst. Respond only in JSON format.",
                 messages=[
+                    {"role": "system", "content": "You are an expert financial analyst. Respond only in JSON format."},
                     {"role": "user", "content": self._build_prompt(context)}
-                ]
+                ],
+                response_format={"type": "json_object"}
             )
 
             # Extract JSON from response
-            text_response = response.content[0].text
+            text_response = response.choices[0].message.content
             try:
-                # Sometimes Claude includes ```json ... ``` despite instructions
+                # Sometimes LLMs include ```json ... ``` despite instructions
                 if "```json" in text_response:
                     text_response = text_response.split("```json")[1].split("```")[0].strip()
                 elif "```" in text_response:
@@ -97,7 +95,7 @@ Do not include any other text or markdown formatting.
                 return parsed
 
             except json.JSONDecodeError:
-                logger.error(f"Failed to parse Claude JSON response for signal {signal_id}: {text_response}")
+                logger.error(f"Failed to parse Groq JSON response for signal {signal_id}: {text_response}")
                 return None
 
         except Exception as e:
@@ -107,9 +105,6 @@ Do not include any other text or markdown formatting.
     async def stream_deep_dive(self, signal_id: str, db: Session) -> AsyncGenerator[str, None]:
         """
         Stream the deep dive explanation using Server-Sent Events (SSE).
-        If already cached/saved, streams the saved text chunk by chunk.
-        If not saved, it would ideally stream directly from Claude, but for simplicity
-        is implemented to generate, save, and then stream the result chunked.
         """
         # First check cache
         cache_key = f"signal_explain:{signal_id}"
