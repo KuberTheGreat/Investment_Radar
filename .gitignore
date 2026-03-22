@@ -45,3 +45,4 @@ ml/models/*
 
 # Ignore project specification documents
 InvestorRadar_SRS.pdf
+srs_text.txt
