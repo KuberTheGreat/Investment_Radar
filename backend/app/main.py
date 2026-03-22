@@ -57,6 +57,3 @@ async def health_check():
 
 from app.api.endpoints import router as api_router
 app.include_router(api_router, prefix="/api")
-
-from app.api.endpoints import router as api_router
-app.include_router(api_router, prefix="/api")
