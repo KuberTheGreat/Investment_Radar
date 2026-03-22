@@ -42,3 +42,6 @@ async def health_check():
         "message": "InvestorRadar API is running",
         "version": "1.0.0"
     }
+
+from app.api.endpoints import router as api_router
+app.include_router(api_router, prefix="/api")

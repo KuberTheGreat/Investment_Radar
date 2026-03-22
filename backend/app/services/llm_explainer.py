@@ -3,7 +3,8 @@ import logging
 from typing import AsyncGenerator
 from groq import AsyncGroq
 from app.core.config import settings
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 from app.models.signals import Signal
 import redis.asyncio as redis
 
@@ -35,7 +36,7 @@ Return ONLY valid JSON with exactly the three keys: "one_liner", "paragraph", an
 Do not include any other text or markdown formatting.
 """
 
-    async def generate_explanations(self, db: Session, signal_id: str) -> dict:
+    async def generate_explanations(self, db: AsyncSession, signal_id: str) -> dict:
         """
         Background task to generate explanations for a signal, save to DB, and cache them.
         """
@@ -43,7 +44,9 @@ Do not include any other text or markdown formatting.
             return None
 
         # Fetch signal details (synchronous logic assuming sync Session is passed)
-        signal = db.query(Signal).filter(Signal.id == signal_id).first()
+        stmt = select(Signal).where(Signal.id == signal_id)
+        result = await db.execute(stmt)
+        signal = result.scalars().first()
         if not signal:
             return None
 
@@ -82,7 +85,7 @@ Do not include any other text or markdown formatting.
                 signal.one_liner = parsed.get("one_liner", "")
                 signal.paragraph_explanation = parsed.get("paragraph", "")
                 signal.deep_dive = parsed.get("deep_dive", "")
-                db.commit()
+                await db.commit()
 
                 # Cache to Redis for quick access
                 cache_key = f"signal_explain:{signal_id}"
@@ -102,7 +105,7 @@ Do not include any other text or markdown formatting.
             logger.error(f"Error generating explanations for {signal_id}: {str(e)}")
             return None
 
-    async def stream_deep_dive(self, signal_id: str, db: Session) -> AsyncGenerator[str, None]:
+    async def stream_deep_dive(self, signal_id: str, db: AsyncSession) -> AsyncGenerator[str, None]:
         """
         Stream the deep dive explanation using Server-Sent Events (SSE).
         """
@@ -115,7 +118,9 @@ Do not include any other text or markdown formatting.
             deep_dive_text = json.loads(cached_data).get("deep_dive", "")
         else:
             # Check DB
-            signal = db.query(Signal).filter(Signal.id == signal_id).first()
+            stmt = select(Signal).where(Signal.id == signal_id)
+            result = await db.execute(stmt)
+            signal = result.scalars().first()
             if signal and signal.deep_dive:
                 deep_dive_text = signal.deep_dive
                 # populate cache
