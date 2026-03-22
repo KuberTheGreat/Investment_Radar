@@ -1,0 +1,13 @@
+var R=require("../chunks/ssr/[turbopack]_runtime.js")("server/app/page.js")
+R.c("server/chunks/ssr/[root-of-the-server]__0crpcf-._.js")
+R.c("server/chunks/ssr/0bu4_next_dist_esm_build_templates_app-page_0eanya~.js")
+R.c("server/chunks/ssr/[root-of-the-server]__0_ain.~._.js")
+R.c("server/chunks/ssr/[root-of-the-server]__0vwl9pp._.js")
+R.c("server/chunks/ssr/Investment_Radar_frontend_app_layout_tsx_0nnx0ey._.js")
+R.c("server/chunks/ssr/0bu4_next_dist_client_components_0ys3o-f._.js")
+R.c("server/chunks/ssr/0bu4_next_dist_client_components_builtin_forbidden_05r2bjc.js")
+R.c("server/chunks/ssr/0bu4_next_dist_client_components_builtin_unauthorized_13sxc7j.js")
+R.c("server/chunks/ssr/0bu4_next_dist_client_components_builtin_global-error_0wp--sr.js")
+R.c("server/chunks/ssr/Investment_Radar_frontend__next-internal_server_app_page_actions_0vfhahu.js")
+R.m(16704)
+module.exports=R.m(16704).exports

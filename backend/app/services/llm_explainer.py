@@ -1,5 +1,6 @@
 import json
 import logging
+import asyncio
 from typing import AsyncGenerator
 from groq import AsyncGroq
 from app.core.config import settings
@@ -7,6 +8,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.models.signals import Signal
 import redis.asyncio as redis
+from app.services.web_search import WebSearcher
+from app.services.rag import RAGManager
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +24,8 @@ class LLMExplainerService:
         
         self.model = settings.GROQ_MODEL
         self.redis_client = redis.from_url(settings.REDIS_URL, decode_responses=True)
+        self.web_searcher = WebSearcher()
+        self.rag_manager = RAGManager()
 
     def _build_prompt(self, signal_context: dict) -> str:
         return f"""
@@ -31,6 +36,11 @@ You are an expert financial analyst. Analyze the following trading signal contex
 
 Signal Context:
 {json.dumps(signal_context, indent=2)}
+
+CRITICAL RULES:
+1. You MUST include explicit source citations formatted as [Source: <Name>, <Date>] if invoking Web or RAG news.
+2. Do NOT hallucinate any statistics. Ground everything in the input data.
+3. End the deep_dive with: 'This is not financial advice. Past patterns do not guarantee future results.'
 
 Return ONLY valid JSON with exactly the three keys: "one_liner", "paragraph", and "deep_dive". 
 Do not include any other text or markdown formatting.
@@ -57,7 +67,9 @@ Do not include any other text or markdown formatting.
             "win_rate_5d": float(signal.win_rate_5d) if signal.win_rate_5d else None,
             "win_rate_15d": float(signal.win_rate_15d) if signal.win_rate_15d else None,
             "confluence_score": signal.confluence_score,
-            "high_confluence": signal.high_confluence
+            "high_confluence": signal.high_confluence,
+            "news_context": await asyncio.to_thread(self.web_searcher.get_latest_news, signal.symbol),
+            "rag_context": await asyncio.to_thread(self.rag_manager.query, f"Latest updates, earnings, and fundamentals for {signal.symbol}")
         }
 
         try:
@@ -82,9 +94,10 @@ Do not include any other text or markdown formatting.
                 parsed = json.loads(text_response)
                 
                 # Update DB record
-                signal.one_liner = parsed.get("one_liner", "")
-                signal.paragraph_explanation = parsed.get("paragraph", "")
-                signal.deep_dive = parsed.get("deep_dive", "")
+                signal.one_liner = str(parsed.get("one_liner", ""))
+                signal.paragraph_explanation = str(parsed.get("paragraph", ""))
+                dd = parsed.get("deep_dive", "")
+                signal.deep_dive = json.dumps(dd) if isinstance(dd, dict) else str(dd)
                 await db.commit()
 
                 # Cache to Redis for quick access
@@ -136,7 +149,7 @@ Do not include any other text or markdown formatting.
                     deep_dive_text = res.get("deep_dive", "")
 
         if not deep_dive_text:
-            yield "data: No explanation available.\n\n"
+            yield "No explanation available."
             return
             
         # Stream the text in chunks for SSE
@@ -144,9 +157,9 @@ Do not include any other text or markdown formatting.
         words = deep_dive_text.split()
         for i in range(0, len(words), chunk_size):
             chunk_text = " ".join(words[i:i+chunk_size])
-            yield f"data: {chunk_text} \n\n"
+            yield chunk_text
         
         # End of stream marker
-        yield "data: [DONE]\n\n"
+        yield "[DONE]"
 
 llm_service = LLMExplainerService()

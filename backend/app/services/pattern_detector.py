@@ -105,6 +105,6 @@ async def run_pattern_detector():
     import asyncio
     tasks = []
     for s in TARGET_SYMBOLS:
-        tasks.append(detect_patterns_for_symbol(s, timeframe="15m"))
-        tasks.append(detect_patterns_for_symbol(s, timeframe="1d"))
+        tasks.append(detect_patterns_for_symbol(s.replace(".NS", ""), timeframe="15m"))
+        tasks.append(detect_patterns_for_symbol(s.replace(".NS", ""), timeframe="1d"))
     await asyncio.gather(*tasks)

@@ -3,6 +3,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from app.services.market_data import run_market_data_pipeline
+from app.services.pattern_detector import run_pattern_detector
+from app.services.confluence_scorer import run_confluence_scorer
+from app.services.opportunity_radar import run_opportunity_radar
+from app.services.corporate_events import run_corporate_events_pipeline
 
 scheduler = AsyncIOScheduler()
 
@@ -10,10 +14,18 @@ scheduler = AsyncIOScheduler()
 async def lifespan(app: FastAPI):
     # Startup
     scheduler.add_job(run_market_data_pipeline, 'interval', minutes=15, id='market_data_job')
+    scheduler.add_job(run_pattern_detector, 'interval', minutes=15, id='pattern_job', max_instances=1)
+    scheduler.add_job(run_corporate_events_pipeline, 'interval', minutes=60, id='corporate_events_job', max_instances=1)
+    scheduler.add_job(run_confluence_scorer, 'interval', minutes=15, id='scorer_job', max_instances=1)
+    scheduler.add_job(run_opportunity_radar, 'interval', minutes=15, id='radar_job', max_instances=1)
     scheduler.start()
     
-    # Run once immediately on startup
+    # Run once immediately on startup sequentially to seed DB
     await run_market_data_pipeline()
+    await run_corporate_events_pipeline()
+    await run_pattern_detector()
+    await run_confluence_scorer()
+    await run_opportunity_radar()
     
     yield
     # Shutdown

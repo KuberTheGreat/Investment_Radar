@@ -1,0 +1,3 @@
+module.exports=[55307,(a,b,c)=>{"use strict";function d(){return null}Object.defineProperty(c,"__esModule",{value:!0}),Object.defineProperty(c,"default",{enumerable:!0,get:function(){return d}}),("function"==typeof c.default||"object"==typeof c.default&&null!==c.default)&&void 0===c.default.__esModule&&(Object.defineProperty(c.default,"__esModule",{value:!0}),Object.assign(c.default,c),b.exports=c.default)}];
+
+//# sourceMappingURL=0bu4_next_dist_client_components_noop-head_0v_tj68.js.map
