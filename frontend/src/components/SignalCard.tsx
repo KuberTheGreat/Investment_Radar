@@ -43,7 +43,6 @@ function timeAgo(iso: string) {
 }
 
 export default function SignalCard({ signal }: { signal: Signal }) {
-  const isBullish = signal.signal_type !== "opportunity";
   const direction = signal.one_liner?.toLowerCase().includes("bear") ? "bearish" : "bullish";
 
   return (

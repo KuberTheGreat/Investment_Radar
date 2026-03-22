@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { fetchSignals } from "@/lib/api";
 import type { SignalFilters, Signal } from "@/lib/api";
@@ -20,7 +20,6 @@ export default function Home() {
     if (window.location.search.includes("tab=radar")) setTab("radar");
   }, []);
 
-  // Active filters for current tab
   const activeFilters: SignalFilters =
     tab === "radar" ? { ...filters, signal_type: "opportunity" } : { ...filters };
 

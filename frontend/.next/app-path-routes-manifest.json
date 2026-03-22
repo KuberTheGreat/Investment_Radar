@@ -1,6 +1,1 @@
-{
-  "/_global-error/page": "/_global-error",
-  "/_not-found/page": "/_not-found",
-  "/page": "/",
-  "/stock/[symbol]/page": "/stock/[symbol]"
-}
+{"/_not-found/page":"/_not-found","/page":"/","/stock/[symbol]/page":"/stock/[symbol]","/favicon.ico/route":"/favicon.ico"}
