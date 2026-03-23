@@ -22,7 +22,7 @@ async def fetch_and_store_bse_bulk_deals():
                 "quantity": 500000,
                 "price_per_share": 2900.50,
                 "total_value_cr": 145.02,
-                "is_anomaly": False,
+                "is_anomaly": True,
                 "source_reference": "https://www.bseindia.com/markets/equity/EQReports/bulk_deals.aspx"
             }
         ]

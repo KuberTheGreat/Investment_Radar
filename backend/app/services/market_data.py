@@ -10,7 +10,7 @@ import pytz
 # For hackathon demonstration, we use top 10 Nifty stocks
 TARGET_SYMBOLS = [
     "RELIANCE.NS", "HDFCBANK.NS", "ICICIBANK.NS", "INFY.NS", "ITC.NS",
-    "TCS.NS", "LARSEN.NS", "BAJFINANCE.NS", "KOTAKBANK.NS", "AXISBANK.NS"
+    "TCS.NS", "LT.NS", "BAJFINANCE.NS", "KOTAKBANK.NS", "AXISBANK.NS"
 ]
 
 IST = pytz.timezone('Asia/Kolkata')

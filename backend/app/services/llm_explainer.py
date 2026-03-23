@@ -210,7 +210,7 @@ Return ONLY valid JSON with exactly two keys:
             # ── Load corporate events ────────────────────────────────────────
             events_summary = []
             if signal.event_ids:
-                from app.models.models import CorporateEvent
+                from app.models.events import CorporateEvent
                 evt_stmt = select(CorporateEvent).where(
                     CorporateEvent.id.in_([str(e) for e in signal.event_ids])
                 )

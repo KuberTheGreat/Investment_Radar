@@ -1,40 +1,51 @@
 import asyncio
-from datetime import timedelta
+import logging
 import pandas as pd
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
-from sqlalchemy.orm import selectinload
 
 from app.core.database import AsyncSessionLocal
 from app.models.patterns import DetectedPattern, BacktestResult
 from app.models.events import CorporateEvent
 from app.models.signals import Signal
+from datetime import timedelta
+
+logger = logging.getLogger(__name__)
+
 
 async def process_new_patterns():
     """
     Scans for detected patterns that haven't been turned into Signals yet
     and calculates their confluence score based on corporate events.
+    Uses pattern_id uniqueness to prevent duplicate signal generation.
     """
     async with AsyncSessionLocal() as session:
-        # Fetch patterns not yet in signals
-        stmt = select(DetectedPattern).outerjoin(
-            Signal, DetectedPattern.id == Signal.pattern_id
-        ).where(Signal.id == None)
-        
+        # Fetch patterns that haven't been turned into a signal yet
+        existing_pattern_ids_stmt = select(Signal.pattern_id).where(Signal.pattern_id.isnot(None))
+        existing_result = await session.execute(existing_pattern_ids_stmt)
+        existing_pattern_ids = set(existing_result.scalars().all())
+        logger.info(f"confluence_scorer: {len(existing_pattern_ids)} patterns already have signals.")
+
+        stmt = select(DetectedPattern)
         result = await session.execute(stmt)
-        new_patterns = result.scalars().all()
-        
+        all_patterns = result.scalars().all()
+
+        new_patterns = [p for p in all_patterns if p.id not in existing_pattern_ids]
+        logger.info(f"confluence_scorer: {len(new_patterns)} new patterns to score (out of {len(all_patterns)} total).")
+
         if not new_patterns:
+            logger.info("confluence_scorer: No new patterns to score. Skipping.")
             return
-            
-        print(f"Scoring {len(new_patterns)} new patterns for confluence...")
-        
+
+        new_signal_ids = []
+
         for pattern in new_patterns:
-            # Look for ±3 days events
+            logger.debug(f"confluence_scorer: Scoring pattern {pattern.id} ({pattern.symbol} / {pattern.pattern_name})")
+
             p_date = pattern.detected_at.date()
-            start_date = p_date - timedelta(days=5) # 5 calendar days covers 3 trading days roughly
+            start_date = p_date - timedelta(days=5)
             end_date = p_date + timedelta(days=5)
-            
+
             ev_stmt = select(CorporateEvent).where(
                 CorporateEvent.symbol == pattern.symbol,
                 CorporateEvent.event_date >= start_date,
@@ -42,36 +53,32 @@ async def process_new_patterns():
             )
             ev_result = await session.execute(ev_stmt)
             events = ev_result.scalars().all()
-            
+
             confluence_score = 0
             event_ids = []
-            
+
             for ev in events:
                 event_ids.append(ev.id)
-                # Logic matching SRS FR-CS-02
                 if ev.is_anomaly and confluence_score < 3:
                     confluence_score = 3
                 elif ev.total_value_cr and ev.total_value_cr >= 1 and confluence_score < 2:
                     if ev.event_type in ['bulk_deal', 'insider_buy']:
                         confluence_score = 2
-                elif ev.event_type == 'block_deal' and (ev.total_value_cr is None or ev.total_value_cr < 1) and confluence_score < 1:
+                elif ev.event_type == 'block_deal' and confluence_score < 1:
                     confluence_score = 1
-                    
-            # Fetch win rates
+
             bt_stmt = select(BacktestResult).where(
                 BacktestResult.symbol == pattern.symbol,
                 BacktestResult.pattern_name == pattern.pattern_name
             )
             bt_result = await session.execute(bt_stmt)
             bt = bt_result.scalars().first()
-            
+
             w5 = float(bt.win_rate_5d) if bt and bt.win_rate_5d else 0.0
             w15 = float(bt.win_rate_15d) if bt and bt.win_rate_15d else 0.0
             lc = bt.low_confidence if bt else True
-            
-            # Composite rank (FR-CS-03)
             signal_rank = w15 * (1 + 0.3 * confluence_score)
-            
+
             sig = dict(
                 symbol=pattern.symbol,
                 signal_type="pattern",
@@ -86,13 +93,41 @@ async def process_new_patterns():
                 is_active=True,
                 created_at=pd.Timestamp.utcnow()
             )
-            
-            insert_stmt = insert(Signal).values(**sig)
-            await session.execute(insert_stmt)
-            
+
+            # Use ON CONFLICT DO NOTHING on pattern_id to prevent duplicates
+            insert_stmt = insert(Signal).values(**sig).on_conflict_do_nothing(
+                index_elements=["pattern_id"]
+            )
+            result = await session.execute(insert_stmt)
+            if result.rowcount:
+                logger.info(f"confluence_scorer: Inserted signal for pattern {pattern.id} ({pattern.symbol})")
+                # Fetch the inserted signal id for pre-generation
+                new_sig_stmt = select(Signal).where(Signal.pattern_id == pattern.id)
+                new_sig_res = await session.execute(new_sig_stmt)
+                new_sig = new_sig_res.scalars().first()
+                if new_sig:
+                    new_signal_ids.append(str(new_sig.id))
+            else:
+                logger.debug(f"confluence_scorer: Skipped duplicate for pattern {pattern.id}")
+
         await session.commit()
-        print("Confluence scoring complete.")
+        logger.info(f"confluence_scorer: Committed {len(new_signal_ids)} new signals.")
+
+    # Pre-generate one_liner + paragraph in background after commit (outside session)
+    if new_signal_ids:
+        logger.info(f"confluence_scorer: Pre-generating summaries for {len(new_signal_ids)} signals (sequentially)...")
+        from app.services.llm_explainer import llm_service
+        async with AsyncSessionLocal() as gen_session:
+            for sid in new_signal_ids:
+                try:
+                    await llm_service.generate_summary(gen_session, sid)
+                    await asyncio.sleep(2)  # Polite delay between Groq calls
+                except Exception as e:
+                    logger.error(f"confluence_scorer: Summary generation failed for {sid} — {e}")
+
 
 async def run_confluence_scorer():
-    """ Called shortly after pattern detector finishes """
+    """Called shortly after pattern detector finishes."""
+    logger.info("Running Confluence Scorer...")
     await process_new_patterns()
+    logger.info("Confluence Scorer complete.")

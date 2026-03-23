@@ -1,7 +1,18 @@
+import logging
+import sys
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+
+# ── Logging Configuration ─────────────────────────────────────────────────────
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    datefmt="%H:%M:%S",
+    handlers=[logging.StreamHandler(sys.stdout)]
+)
+logger = logging.getLogger("investorradar")
 from app.services.market_data import run_market_data_pipeline
 from app.services.pattern_detector import run_pattern_detector
 from app.services.confluence_scorer import run_confluence_scorer
@@ -23,12 +34,19 @@ async def lifespan(app: FastAPI):
     scheduler.add_job(expire_old_signals, 'cron', hour=18, minute=30, id='signal_expiry_job')
     scheduler.start()
     
-    # Run once immediately on startup sequentially to seed DB
-    await run_market_data_pipeline()
-    await run_corporate_events_pipeline()
-    await run_pattern_detector()
-    await run_confluence_scorer()
-    await run_opportunity_radar()
+    # Run once immediately on startup but in the background so the server can accept requests
+    import asyncio
+    async def seed_data():
+        try:
+            await run_market_data_pipeline()
+            await run_corporate_events_pipeline()
+            await run_pattern_detector()
+            await run_confluence_scorer()
+            await run_opportunity_radar()
+        except Exception as e:
+            print(f"Error during initial pipeline seed: {e}")
+            
+    asyncio.create_task(seed_data())
     
     yield
     # Shutdown

@@ -2,7 +2,7 @@ import os
 import chromadb
 
 class RAGManager:
-    def __init__(self, db_path: str = "/app/data/chroma_db"):
+    def __init__(self, db_path: str = "data/chroma_db"):
         os.makedirs(db_path, exist_ok=True)
         self.client = chromadb.PersistentClient(path=db_path)
         self.collection = self.client.get_or_create_collection(name="fundamentals")
