@@ -16,12 +16,14 @@ interface SignalListProps {
   filters?: Omit<SignalFilters, "skip" | "limit">;
   pageSize?: number;
   layout?: "grid" | "list";
+  deduplicateBySymbol?: boolean;
 }
 
 export function SignalList({
   filters = {},
   pageSize = 20,
   layout = "grid",
+  deduplicateBySymbol = false,
 }: SignalListProps) {
   const {
     data,
@@ -63,7 +65,11 @@ export function SignalList({
 
   const signals = data?.data ?? [];
 
-  if (signals.length === 0) {
+  const processedSignals = deduplicateBySymbol
+    ? signals.filter((v, i, a) => a.findIndex((t) => t.symbol === v.symbol) === i)
+    : signals;
+
+  if (processedSignals.length === 0) {
     return (
       <EmptyState
         icon={InboxIcon}
@@ -83,7 +89,7 @@ export function SignalList({
             : "space-y-3"
         )}
       >
-        {signals.map((signal) => (
+        {processedSignals.map((signal) => (
           <SignalCard
             key={signal.id}
             signal={signal}

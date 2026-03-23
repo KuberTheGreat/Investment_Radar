@@ -60,6 +60,18 @@ export default function StockPage({ params }: StockPageProps) {
 function PatternsPanel({ symbol }: { symbol: string }) {
   const { data: patterns, isLoading, error, refetch } = usePatterns(symbol);
 
+  // Deduplicate by name and time
+  const uniquePatterns = patterns
+    ? patterns.filter(
+        (v, i, a) =>
+          a.findIndex(
+            (t) =>
+              t.pattern_name === v.pattern_name &&
+              t.detected_at === v.detected_at
+          ) === i
+      )
+    : [];
+
   return (
     <Card>
       <CardHeader>
@@ -67,8 +79,10 @@ function PatternsPanel({ symbol }: { symbol: string }) {
           <Activity className="w-4 h-4 text-accent" />
           <CardTitle>Detected Patterns</CardTitle>
         </div>
-        {patterns && (
-          <span className="text-xs text-muted">{patterns.length} found</span>
+        {!isLoading && (
+          <span className="text-xs text-muted">
+            {uniquePatterns.length} found
+          </span>
         )}
       </CardHeader>
       {isLoading ? (
@@ -83,7 +97,7 @@ function PatternsPanel({ symbol }: { symbol: string }) {
           onRetry={() => refetch()}
           message="Could not load patterns"
         />
-      ) : !patterns || patterns.length === 0 ? (
+      ) : uniquePatterns.length === 0 ? (
         <EmptyState
           icon={Activity}
           title="No patterns detected"
@@ -92,7 +106,7 @@ function PatternsPanel({ symbol }: { symbol: string }) {
         />
       ) : (
         <div className="space-y-2 max-h-72 overflow-y-auto">
-          {patterns.map((p) => (
+          {uniquePatterns.map((p) => (
             <div
               key={p.id}
               className="flex items-center gap-3 p-2.5 rounded-lg bg-surface-2 border border-border-subtle text-xs"
@@ -128,6 +142,19 @@ function PatternsPanel({ symbol }: { symbol: string }) {
 function EventsPanel({ symbol }: { symbol: string }) {
   const { data: events, isLoading, error, refetch } = useEvents(symbol);
 
+  // Deduplicate events by type, date, and party
+  const uniqueEvents = events
+    ? events.filter(
+        (v, i, a) =>
+          a.findIndex(
+            (t) =>
+              t.event_type === v.event_type &&
+              t.event_date === v.event_date &&
+              t.party_name === v.party_name
+          ) === i
+      )
+    : [];
+
   return (
     <Card>
       <CardHeader>
@@ -135,8 +162,10 @@ function EventsPanel({ symbol }: { symbol: string }) {
           <Calendar className="w-4 h-4 text-accent" />
           <CardTitle>Corporate Events</CardTitle>
         </div>
-        {events && (
-          <span className="text-xs text-muted">{events.length} found</span>
+        {!isLoading && (
+          <span className="text-xs text-muted">
+            {uniqueEvents.length} found
+          </span>
         )}
       </CardHeader>
       {isLoading ? (
@@ -151,7 +180,7 @@ function EventsPanel({ symbol }: { symbol: string }) {
           onRetry={() => refetch()}
           message="Could not load events"
         />
-      ) : !events || events.length === 0 ? (
+      ) : uniqueEvents.length === 0 ? (
         <EmptyState
           icon={Calendar}
           title="No corporate events"
@@ -160,7 +189,7 @@ function EventsPanel({ symbol }: { symbol: string }) {
         />
       ) : (
         <div className="space-y-2 max-h-72 overflow-y-auto">
-          {events.map((event) => (
+          {uniqueEvents.map((event) => (
             <CorporateEventItem key={event.id} event={event} />
           ))}
         </div>

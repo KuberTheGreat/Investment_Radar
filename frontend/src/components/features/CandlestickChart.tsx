@@ -109,7 +109,17 @@ export function CandlestickChart({ symbol }: CandlestickChartProps) {
 
     // Add pattern markers via v4 plugin API
     if (patterns && patterns.length > 0 && seriesRef.current) {
-      const markers = patterns
+      // Deduplicate by name and time
+      const uniquePatterns = patterns.filter(
+        (v, i, a) =>
+          a.findIndex(
+            (t) =>
+              t.pattern_name === v.pattern_name &&
+              t.detected_at === v.detected_at
+          ) === i
+      );
+
+      const markers = uniquePatterns
         .filter((p) => {
           const ts = Math.floor(new Date(p.detected_at).getTime() / 1000);
           return sorted.some((c) => c.time === ts);

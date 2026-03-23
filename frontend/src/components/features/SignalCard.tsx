@@ -84,34 +84,32 @@ export function SignalCard({ signal, compact = false }: SignalCardProps) {
         )}
 
         {/* Win rates */}
-        {(signal.win_rate_5d != null || signal.win_rate_15d != null) && (
-          <div className="flex gap-4 mb-3">
-            {signal.win_rate_5d != null && (
-              <div>
-                <p className="text-[10px] text-muted-2 mb-0.5">5D Win Rate</p>
-                <p className={cn(
-                    "text-xs font-semibold",
-                    signal.win_rate_5d >= 60 ? "text-bullish" : "text-muted"
-                  )}
-                >
-                  {formatPercent(signal.win_rate_5d)}
-                </p>
-              </div>
-            )}
-            {signal.win_rate_15d != null && (
-              <div>
-                <p className="text-[10px] text-muted-2 mb-0.5">15D Win Rate</p>
-                <p className={cn(
-                    "text-xs font-semibold",
-                    signal.win_rate_15d >= 60 ? "text-bullish" : "text-muted"
-                  )}
-                >
-                  {formatPercent(signal.win_rate_15d)}
-                </p>
-              </div>
-            )}
+        <div className="flex gap-4 mb-3">
+          <div>
+            <p className="text-[10px] text-muted-2 mb-0.5">5D Win Rate</p>
+            <p className={cn(
+                "text-xs font-semibold",
+                signal.win_rate_5d != null
+                  ? signal.win_rate_5d >= 60 ? "text-bullish" : "text-muted"
+                  : "text-muted"
+              )}
+            >
+              {signal.win_rate_5d != null ? formatPercent(signal.win_rate_5d) : "N/A"}
+            </p>
           </div>
-        )}
+          <div>
+            <p className="text-[10px] text-muted-2 mb-0.5">15D Win Rate</p>
+            <p className={cn(
+                "text-xs font-semibold",
+                signal.win_rate_15d != null
+                  ? signal.win_rate_15d >= 60 ? "text-bullish" : "text-muted"
+                  : "text-muted"
+              )}
+            >
+              {signal.win_rate_15d != null ? formatPercent(signal.win_rate_15d) : "N/A"}
+            </p>
+          </div>
+        </div>
 
         {/* Footer */}
         <div className="flex items-center justify-between pt-2 border-t border-border-subtle">

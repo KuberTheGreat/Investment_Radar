@@ -81,12 +81,12 @@ export function SignalDetailPanel({ signal }: SignalDetailPanelProps) {
               <p
                 className={cn(
                   "text-lg font-bold",
-                  signal.win_rate_5d != null && signal.win_rate_5d >= 60
-                    ? "text-bullish"
+                  signal.win_rate_5d != null
+                    ? signal.win_rate_5d >= 60 ? "text-bullish" : "text-muted"
                     : "text-muted"
                 )}
               >
-                {formatPercent(signal.win_rate_5d)}
+                {signal.win_rate_5d != null ? formatPercent(signal.win_rate_5d) : "N/A"}
               </p>
             </div>
             <div className="bg-surface-2 rounded-lg p-3 border border-border-subtle">
@@ -94,12 +94,12 @@ export function SignalDetailPanel({ signal }: SignalDetailPanelProps) {
               <p
                 className={cn(
                   "text-lg font-bold",
-                  signal.win_rate_15d != null && signal.win_rate_15d >= 60
-                    ? "text-bullish"
+                  signal.win_rate_15d != null
+                    ? signal.win_rate_15d >= 60 ? "text-bullish" : "text-muted"
                     : "text-muted"
                 )}
               >
-                {formatPercent(signal.win_rate_15d)}
+                {signal.win_rate_15d != null ? formatPercent(signal.win_rate_15d) : "N/A"}
               </p>
             </div>
           </div>
@@ -115,7 +115,7 @@ export function SignalDetailPanel({ signal }: SignalDetailPanelProps) {
               </div>
             </CardHeader>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              <InfoCell label="Pattern" value={signal.pattern.pattern_name} />
+              <InfoCell label="Pattern" value={signal.pattern.pattern_name.replace("CDL", "")} />
               <InfoCell
                 label="Direction"
                 value={
@@ -132,7 +132,7 @@ export function SignalDetailPanel({ signal }: SignalDetailPanelProps) {
                     ) : (
                       <TrendingDown className="w-3.5 h-3.5" />
                     )}
-                    {patternDirection}
+                    <span className="capitalize">{patternDirection}</span>
                   </span>
                 }
               />
@@ -158,13 +158,34 @@ export function SignalDetailPanel({ signal }: SignalDetailPanelProps) {
                 <CardTitle>Corporate Events</CardTitle>
               </div>
               <span className="text-xs text-muted">
-                {signal.events.length} event{signal.events.length > 1 ? "s" : ""}
+                {
+                  signal.events.filter(
+                    (v, i, a) =>
+                      a.findIndex(
+                        (t) =>
+                          t.event_type === v.event_type &&
+                          t.event_date === v.event_date &&
+                          t.party_name === v.party_name
+                      ) === i
+                  ).length
+                }{" "}
+                event{signal.events.length !== 1 ? "s" : ""}
               </span>
             </CardHeader>
             <div className="space-y-2">
-              {signal.events.map((event) => (
-                <CorporateEventItem key={event.id} event={event} />
-              ))}
+              {signal.events
+                .filter(
+                  (v, i, a) =>
+                    a.findIndex(
+                      (t) =>
+                        t.event_type === v.event_type &&
+                        t.event_date === v.event_date &&
+                        t.party_name === v.party_name
+                    ) === i
+                )
+                .map((event) => (
+                  <CorporateEventItem key={event.id} event={event} />
+                ))}
             </div>
           </Card>
         )}

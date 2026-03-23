@@ -76,6 +76,7 @@ export default function DashboardPage() {
                 filters={{ high_confluence_only: true }}
                 pageSize={6}
                 layout="grid"
+                deduplicateBySymbol
               />
             </ErrorBoundary>
           </div>
