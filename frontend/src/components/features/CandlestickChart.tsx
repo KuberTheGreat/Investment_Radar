@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { createChart, ColorType, CrosshairMode, CandlestickSeries } from "lightweight-charts";
+import { createChart, ColorType, CrosshairMode, CandlestickSeries, createSeriesMarkers } from "lightweight-charts";
 import { useOHLCV, usePatterns } from "@/lib/hooks";
 import { Spinner } from "@/components/ui/Spinner";
 import { ErrorDisplay } from "@/components/ui/ErrorBoundary";
@@ -107,8 +107,8 @@ export function CandlestickChart({ symbol }: CandlestickChartProps) {
     const sorted = [...candles].sort((a, b) => a.time - b.time);
     seriesRef.current.setData(sorted);
 
-    // Add pattern markers
-    if (patterns && patterns.length > 0) {
+    // Add pattern markers via v4 plugin API
+    if (patterns && patterns.length > 0 && seriesRef.current) {
       const markers = patterns
         .filter((p) => {
           const ts = Math.floor(new Date(p.detected_at).getTime() / 1000);
@@ -116,16 +116,22 @@ export function CandlestickChart({ symbol }: CandlestickChartProps) {
         })
         .slice(0, 20)
         .map((p) => ({
-          time: Math.floor(new Date(p.detected_at).getTime() / 1000),
-          position: p.signal_direction === "bullish" ? "belowBar" : "aboveBar",
+          time: Math.floor(new Date(p.detected_at).getTime() / 1000) as number,
+          position: (p.signal_direction === "bullish" ? "belowBar" : "aboveBar") as "belowBar" | "aboveBar",
           color: p.signal_direction === "bullish" ? "hsl(158,64%,52%)" : "hsl(0,84%,60%)",
-          shape: p.signal_direction === "bullish" ? "arrowUp" : "arrowDown",
+          shape: (p.signal_direction === "bullish" ? "arrowUp" : "arrowDown") as "arrowUp" | "arrowDown",
           text: p.pattern_name.replace("CDL", "").toLowerCase(),
         }));
 
       if (markers.length > 0) {
-        seriesRef.current.setMarkers(markers);
-        logger.info("CandlestickChart", `Added ${markers.length} pattern markers`);
+        try {
+          const markersPlugin = createSeriesMarkers(seriesRef.current, markers);
+          logger.info("CandlestickChart", `Added ${markers.length} pattern markers via createSeriesMarkers`);
+          // Store so we can clean up if needed (currently just let it persist)
+          void markersPlugin;
+        } catch (e) {
+          logger.warn("CandlestickChart", "Could not add markers:", e);
+        }
       }
     }
 
