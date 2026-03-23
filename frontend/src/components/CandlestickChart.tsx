@@ -59,15 +59,28 @@ export default function CandlestickChart({ candles, patterns = [], height = 400 
 
     // v5 API: createSeriesMarkers instead of series.setMarkers
     if (patterns.length > 0) {
-      const markers = patterns
-        .map((p) => ({
-          time: Math.floor(new Date(p.detected_at).getTime() / 1000) as unknown as Time,
-          position: p.signal_direction === "bullish" ? ("belowBar" as const) : ("aboveBar" as const),
-          color: p.signal_direction === "bullish" ? "#10b981" : "#ef4444",
-          shape: p.signal_direction === "bullish" ? ("arrowUp" as const) : ("arrowDown" as const),
-          text: p.pattern_name.replace("CDL", "").replace(/([A-Z])/g, " $1").trim(),
-        }))
-        .sort((a, b) => (a.time > b.time ? 1 : -1));
+      // Group markers by time+position to avoid overlapping rendering
+      const markerMap = new Map<string, any>();
+
+      patterns.forEach((p) => {
+        const time = Math.floor(new Date(p.detected_at).getTime() / 1000) as unknown as Time;
+        const position = p.signal_direction === "bullish" ? ("belowBar" as const) : ("aboveBar" as const);
+        const color = p.signal_direction === "bullish" ? "#10b981" : "#ef4444";
+        const shape = p.signal_direction === "bullish" ? ("arrowUp" as const) : ("arrowDown" as const);
+        const textName = p.pattern_name.replace("CDL", "").replace(/([A-Z])/g, " $1").trim();
+
+        const key = `${time}-${position}`;
+        if (markerMap.has(key)) {
+          const existing = markerMap.get(key);
+          if (!existing.text.includes(textName)) {
+             existing.text += ` + ${textName}`;
+          }
+        } else {
+          markerMap.set(key, { time, position, color, shape, text: textName });
+        }
+      });
+
+      const markers = Array.from(markerMap.values()).sort((a, b) => (a.time > b.time ? 1 : -1));
       createSeriesMarkers(series, markers);
     }
 
