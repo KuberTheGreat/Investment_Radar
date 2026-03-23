@@ -92,7 +92,7 @@ export function AIExplainer({ signalId }: AIExplainerProps) {
             {/* Streamed text */}
             <div
               className={cn(
-                "font-mono text-xs text-foreground leading-relaxed whitespace-pre-wrap",
+                "font-mono text-xs text-foreground leading-relaxed whitespace-pre-wrap break-words",
                 "bg-surface-2 rounded-lg p-4 border border-border-subtle min-h-[120px]"
               )}
             >
@@ -102,7 +102,7 @@ export function AIExplainer({ signalId }: AIExplainerProps) {
                 </span>
               )}
               {streaming && (
-                <span className="inline-block w-1.5 h-3.5 bg-accent ml-0.5 animate-blink" />
+                <span className="inline-block w-1.5 h-3.5 bg-accent ml-0.5 animate-pulse align-middle" />
               )}
             </div>
 
