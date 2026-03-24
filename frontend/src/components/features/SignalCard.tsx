@@ -1,11 +1,6 @@
 "use client";
 import Link from "next/link";
-import {
-  TrendingUp,
-  TrendingDown,
-  ArrowRight,
-  AlertTriangle,
-} from "lucide-react";
+import { ArrowRight, AlertTriangle } from "lucide-react";
 import { Signal } from "@/lib/api";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
@@ -24,8 +19,6 @@ interface SignalCardProps {
 
 export function SignalCard({ signal, compact = false }: SignalCardProps) {
   const isBullish = signal.signal_type === "opportunity";
-  // Determine direction from pattern if available
-  const directionHint = signal.high_confluence ? "bullish" : undefined;
 
   return (
     <Link href={`/signals/${signal.id}`} className="block">

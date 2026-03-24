@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { Sparkles, RotateCcw, StopCircle } from "lucide-react";
+import { Sparkles, RotateCcw } from "lucide-react";
 import { useExplainer } from "@/lib/hooks";
 import { Spinner } from "@/components/ui/Spinner";
 import { cn } from "@/components/ui/cn";

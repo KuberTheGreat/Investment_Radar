@@ -8,7 +8,6 @@ import { CorporateEventItem } from "@/components/features/CorporateEventItem";
 import { ErrorBoundary, ErrorDisplay } from "@/components/ui/ErrorBoundary";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
-import { SkeletonCard } from "@/components/ui/Skeleton";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useEvents, usePatterns } from "@/lib/hooks";
 import { Activity, Calendar } from "lucide-react";

@@ -1,7 +1,6 @@
 "use client";
 import { Radio, Wifi, WifiOff, X } from "lucide-react";
 import { useAlerts, AlertItem } from "@/lib/hooks";
-import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { formatTimeAgo } from "@/lib/utils";
 import { cn } from "@/components/ui/cn";

@@ -3,10 +3,9 @@ import {
   TrendingUp,
   TrendingDown,
   Users,
-  AlertTriangle,
 } from "lucide-react";
 import { CorporateEvent } from "@/lib/api";
-import { formatDate, formatCurrency, getEventTypeLabel } from "@/lib/utils";
+import { formatDate, getEventTypeLabel } from "@/lib/utils";
 import { Badge } from "@/components/ui/Badge";
 import { cn } from "@/components/ui/cn";
 

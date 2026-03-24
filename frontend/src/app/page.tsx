@@ -1,5 +1,4 @@
 "use client";
-import { useState } from "react";
 import { TrendingUp, Zap, BarChart2, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { PageWrapper } from "@/components/layout/PageWrapper";

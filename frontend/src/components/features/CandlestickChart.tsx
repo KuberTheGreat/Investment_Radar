@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { createChart, ColorType, CrosshairMode, CandlestickSeries, createSeriesMarkers } from "lightweight-charts";
+import { createChart, ColorType, CrosshairMode } from "lightweight-charts";
 import { useOHLCV, usePatterns } from "@/lib/hooks";
 import { Spinner } from "@/components/ui/Spinner";
 import { ErrorDisplay } from "@/components/ui/ErrorBoundary";
@@ -65,7 +65,7 @@ export function CandlestickChart({ symbol }: CandlestickChartProps) {
       height: 420,
     });
 
-    const series = chart.addSeries(CandlestickSeries, {
+    const series = chart.addCandlestickSeries({
       upColor: "hsl(158, 64%, 52%)",
       downColor: "hsl(0, 84%, 60%)",
       borderUpColor: "hsl(158, 64%, 52%)",
@@ -135,10 +135,8 @@ export function CandlestickChart({ symbol }: CandlestickChartProps) {
 
       if (markers.length > 0) {
         try {
-          const markersPlugin = createSeriesMarkers(seriesRef.current, markers);
-          logger.info("CandlestickChart", `Added ${markers.length} pattern markers via createSeriesMarkers`);
-          // Store so we can clean up if needed (currently just let it persist)
-          void markersPlugin;
+          seriesRef.current.setMarkers(markers);
+          logger.info("CandlestickChart", `Added ${markers.length} pattern markers`);
         } catch (e) {
           logger.warn("CandlestickChart", "Could not add markers:", e);
         }

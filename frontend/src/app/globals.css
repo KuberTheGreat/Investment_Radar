@@ -1,8 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@config "../../tailwind.config.ts";
 
 /* ─── CSS Design Tokens ────────────────────────────────────────────────────── */
 :root {
@@ -66,7 +65,8 @@ body {
   }
 
   .glass-card-hover {
-    @apply glass-card transition-all duration-200;
+    @apply bg-surface/80 backdrop-blur-md border border-border-subtle rounded-xl transition-all duration-200;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05);
   }
   .glass-card-hover:hover {
     @apply border-border -translate-y-0.5;
@@ -91,16 +91,16 @@ body {
     @apply w-2 h-2 rounded-full flex-shrink-0;
   }
   .status-dot-green {
-    @apply status-dot bg-bullish;
+    @apply w-2 h-2 rounded-full flex-shrink-0 bg-bullish;
     box-shadow: 0 0 6px var(--bullish);
     animation: pulse-glow-green 2s ease-in-out infinite;
   }
   .status-dot-amber {
-    @apply status-dot bg-amber;
+    @apply w-2 h-2 rounded-full flex-shrink-0 bg-amber;
     box-shadow: 0 0 6px var(--amber);
   }
   .status-dot-red {
-    @apply status-dot bg-bearish;
+    @apply w-2 h-2 rounded-full flex-shrink-0 bg-bearish;
     box-shadow: 0 0 6px var(--bearish);
   }
 
@@ -118,7 +118,8 @@ body {
            hover:text-foreground hover:bg-surface-2 transition-all duration-150 cursor-pointer;
   }
   .nav-link-active {
-    @apply nav-link text-foreground bg-surface-2 border border-border;
+    @apply flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-foreground bg-surface-2 border border-border
+           transition-all duration-150 cursor-pointer;
   }
 }
 
