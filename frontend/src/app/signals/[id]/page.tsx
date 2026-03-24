@@ -4,6 +4,7 @@ import Link from "next/link";
 import { PageWrapper } from "@/components/layout/PageWrapper";
 import { TopBar } from "@/components/layout/TopBar";
 import { SignalDetailPanel } from "@/components/features/SignalDetailPanel";
+import { SignalList } from "@/components/features/SignalList";
 import { ErrorBoundary, ErrorDisplay } from "@/components/ui/ErrorBoundary";
 import { SkeletonCard } from "@/components/ui/Skeleton";
 import { useSignalDetail } from "@/lib/hooks";
@@ -61,5 +62,20 @@ function SignalDetailContent({ id }: { id: string }) {
     );
   }
 
-  return <SignalDetailPanel signal={signal} />;
+  return (
+    <div className="space-y-8">
+      <SignalDetailPanel signal={signal} />
+      
+      <div className="border-t border-border-subtle pt-8">
+        <h2 className="text-xl font-semibold text-foreground mb-4">
+          Recent Signals for {signal.symbol}
+        </h2>
+        <SignalList 
+          filters={{ symbol: signal.symbol }}
+          pageSize={10}
+          layout="list"
+        />
+      </div>
+    </div>
+  );
 }

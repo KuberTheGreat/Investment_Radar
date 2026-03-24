@@ -76,6 +76,7 @@ export default function SignalsPage() {
             }}
             pageSize={20}
             layout={layout}
+            deduplicateBySymbol={true}
           />
         </ErrorBoundary>
       </PageWrapper>

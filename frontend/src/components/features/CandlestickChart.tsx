@@ -45,19 +45,19 @@ export function CandlestickChart({ symbol }: CandlestickChartProps) {
 
     const chart = createChart(chartContainerRef.current, {
       layout: {
-        background: { type: ColorType.Solid, color: "hsl(222, 40%, 7%)" },
-        textColor: "hsl(215, 15%, 55%)",
+        background: { type: ColorType.Solid, color: "#0B1019" },
+        textColor: "#778294",
       },
       grid: {
-        vertLines: { color: "hsl(222, 25%, 13%)" },
-        horzLines: { color: "hsl(222, 25%, 13%)" },
+        vertLines: { color: "#191E28" },
+        horzLines: { color: "#191E28" },
       },
       crosshair: { mode: CrosshairMode.Normal },
       rightPriceScale: {
-        borderColor: "hsl(222, 25%, 18%)",
+        borderColor: "#222939",
       },
       timeScale: {
-        borderColor: "hsl(222, 25%, 18%)",
+        borderColor: "#222939",
         timeVisible: true,
         secondsVisible: false,
       },
@@ -66,12 +66,12 @@ export function CandlestickChart({ symbol }: CandlestickChartProps) {
     });
 
     const series = chart.addCandlestickSeries({
-      upColor: "hsl(158, 64%, 52%)",
-      downColor: "hsl(0, 84%, 60%)",
-      borderUpColor: "hsl(158, 64%, 52%)",
-      borderDownColor: "hsl(0, 84%, 60%)",
-      wickUpColor: "hsl(158, 64%, 52%)",
-      wickDownColor: "hsl(0, 84%, 60%)",
+      upColor: "#34D399",
+      downColor: "#F87171",
+      borderUpColor: "#34D399",
+      borderDownColor: "#F87171",
+      wickUpColor: "#34D399",
+      wickDownColor: "#F87171",
     });
 
     chartRef.current = chart;
@@ -128,7 +128,7 @@ export function CandlestickChart({ symbol }: CandlestickChartProps) {
         .map((p) => ({
           time: Math.floor(new Date(p.detected_at).getTime() / 1000) as number,
           position: (p.signal_direction === "bullish" ? "belowBar" : "aboveBar") as "belowBar" | "aboveBar",
-          color: p.signal_direction === "bullish" ? "hsl(158,64%,52%)" : "hsl(0,84%,60%)",
+          color: p.signal_direction === "bullish" ? "#34D399" : "#F87171",
           shape: (p.signal_direction === "bullish" ? "arrowUp" : "arrowDown") as "arrowUp" | "arrowDown",
           text: p.pattern_name.replace("CDL", "").toLowerCase(),
         }));

@@ -1,5 +1,6 @@
-"use client";
-import { Bell, BellRing } from "lucide-react";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Search, Bell, BellRing } from "lucide-react";
 import { useAlerts } from "@/lib/hooks";
 import { cn } from "@/components/ui/cn";
 
@@ -11,6 +12,16 @@ interface TopBarProps {
 export function TopBar({ title, subtitle }: TopBarProps) {
   const { alerts, connected } = useAlerts(5);
   const hasAlerts = alerts.length > 0;
+  const [searchQuery, setSearchQuery] = useState("");
+  const router = useRouter();
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      router.push(`/stock/${searchQuery.trim().toUpperCase()}`);
+      setSearchQuery("");
+    }
+  };
 
   return (
     <header
@@ -28,7 +39,19 @@ export function TopBar({ title, subtitle }: TopBarProps) {
         )}
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-4">
+        {/* Search Bar */}
+        <form onSubmit={handleSearch} className="relative hidden md:block">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
+          <input
+            type="text"
+            placeholder="Search stock (e.g., ZOMATO)"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="h-8 w-60 pl-8 pr-3 rounded bg-surface border border-border-subtle text-xs text-foreground placeholder-muted focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all"
+          />
+        </form>
+
         {/* Connection status */}
         <div className="flex items-center gap-1.5 text-xs text-muted">
           <span

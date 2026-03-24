@@ -100,11 +100,11 @@ async def detect_patterns_for_symbol(symbol: str, timeframe: str = "15m", limit:
 
 async def run_pattern_detector():
     """ Runs detection loop across target symbols natively """
-    from app.services.market_data import TARGET_SYMBOLS
-    print(f"Running Pattern Detection for {len(TARGET_SYMBOLS)} symbols...")
+    from app.services.market_data import NIFTY_TOP_10
+    print(f"Running Pattern Detection for {len(NIFTY_TOP_10)} symbols...")
     import asyncio
     tasks = []
-    for s in TARGET_SYMBOLS:
+    for s in NIFTY_TOP_10:
         tasks.append(detect_patterns_for_symbol(s.replace(".NS", ""), timeframe="15m"))
         tasks.append(detect_patterns_for_symbol(s.replace(".NS", ""), timeframe="1d"))
     await asyncio.gather(*tasks)

@@ -7,8 +7,8 @@ from app.models.market_data import OHLCCandle
 from sqlalchemy.dialects.postgresql import insert
 import pytz
 
-# For hackathon demonstration, we use top 10 Nifty stocks
-TARGET_SYMBOLS = [
+# Top 10 Nifty stocks by weight for the background radar loop
+NIFTY_TOP_10 = [
     "RELIANCE.NS", "HDFCBANK.NS", "ICICIBANK.NS", "INFY.NS", "ITC.NS",
     "TCS.NS", "LT.NS", "BAJFINANCE.NS", "KOTAKBANK.NS", "AXISBANK.NS"
 ]
@@ -73,5 +73,5 @@ async def fetch_and_store_klines(symbol: str, period: str = "1d", interval: str 
 async def run_market_data_pipeline():
     """Runs the pipeline for all target symbols."""
     print("Running market data pipeline iteration...")
-    tasks = [fetch_and_store_klines(symbol, period="5d", interval="15m") for symbol in TARGET_SYMBOLS]
+    tasks = [fetch_and_store_klines(symbol, period="5d", interval="15m") for symbol in NIFTY_TOP_10]
     await asyncio.gather(*tasks)

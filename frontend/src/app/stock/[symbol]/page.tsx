@@ -9,9 +9,9 @@ import { ErrorBoundary, ErrorDisplay } from "@/components/ui/ErrorBoundary";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Skeleton } from "@/components/ui/Skeleton";
-import { useEvents, usePatterns } from "@/lib/hooks";
-import { Activity, Calendar } from "lucide-react";
-import { use } from "react";
+import { useEvents, usePatterns, useOHLCV, useOnDemandAnalysis } from "@/lib/hooks";
+import { Activity, Calendar, Loader2 } from "lucide-react";
+import { use, useEffect } from "react";
 
 interface StockPageProps {
   params: Promise<{ symbol: string }>;
@@ -20,6 +20,15 @@ interface StockPageProps {
 export default function StockPage({ params }: StockPageProps) {
   const { symbol } = use(params);
   const upperSymbol = symbol.toUpperCase();
+  
+  const { data: ohlcvData, isLoading: isDataLoading } = useOHLCV(upperSymbol, "15m");
+  const { mutate: triggerAnalysis, isPending: isAnalyzing } = useOnDemandAnalysis();
+
+  useEffect(() => {
+    if (!isDataLoading && ohlcvData && ohlcvData.length === 0 && !isAnalyzing) {
+      triggerAnalysis(upperSymbol);
+    }
+  }, [isDataLoading, ohlcvData, upperSymbol, triggerAnalysis, isAnalyzing]);
 
   return (
     <>
@@ -39,7 +48,17 @@ export default function StockPage({ params }: StockPageProps) {
         <div className="space-y-6">
           {/* Chart */}
           <ErrorBoundary context="CandlestickChart">
-            <CandlestickChart symbol={upperSymbol} />
+            {isAnalyzing ? (
+              <div className="flex flex-col items-center justify-center p-12 border border-border-subtle rounded-xl bg-surface/50 h-[400px]">
+                <Loader2 className="w-8 h-8 text-accent animate-spin mb-4" />
+                <h3 className="text-lg font-medium text-foreground mb-2">Analyzing {upperSymbol}...</h3>
+                <p className="text-sm text-muted text-center max-w-md">
+                  We are fetching historical market data, running pattern recognition models, and computing AI confluence scores in real-time. This may take a few seconds.
+                </p>
+              </div>
+            ) : (
+              <CandlestickChart symbol={upperSymbol} />
+            )}
           </ErrorBoundary>
 
           {/* Patterns + Events row */}

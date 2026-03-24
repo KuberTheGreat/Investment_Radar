@@ -107,6 +107,42 @@ async def get_signal_detail(signal_id: str = Path(...), db: AsyncSession = Depen
 
     return detail
 
+@router.post("/stock/{symbol}/analyze")
+async def analyze_stock_on_demand(symbol: str = Path(...), db: AsyncSession = Depends(get_db)):
+    """
+    On-Demand Pipeline trigger.
+    Fetches missing historical data for a newly searched completely unknown symbol,
+    runs the pattern detector, scores confluence, and prepares it for the UI.
+    """
+    from app.services.market_data import fetch_and_store_klines
+    from app.services.pattern_detector import detect_patterns_for_symbol
+    from app.services.confluence_scorer import process_new_patterns
+    import logging
+    
+    logger = logging.getLogger("investorradar.api")
+    symbol_ns = symbol.upper()
+    if not symbol_ns.endswith(".NS"):
+        symbol_ns += ".NS"
+    base_symbol = symbol_ns.replace(".NS", "")
+    
+    logger.info(f"On-Demand Analysis started for {symbol_ns}")
+    try:
+        # 1. Fetch market data (15m and 1d)
+        await fetch_and_store_klines(symbol_ns, period="5d", interval="15m")
+        await fetch_and_store_klines(symbol_ns, period="2mo", interval="1d")
+        
+        # 2. Detect patterns
+        await detect_patterns_for_symbol(base_symbol, timeframe="15m")
+        await detect_patterns_for_symbol(base_symbol, timeframe="1d")
+        
+        # 3. Score confluence (this naturally picks up newly inserted patterns)
+        await process_new_patterns()
+        
+        return {"status": "success", "message": f"Successfully ran analysis pipeline for {base_symbol}"}
+    except Exception as e:
+        logger.error(f"Error during on-demand analysis for {symbol_ns}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+        
 
 # ── Stock Data ────────────────────────────────────────────────────────────────
 
