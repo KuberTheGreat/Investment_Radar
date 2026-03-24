@@ -11,13 +11,14 @@ import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useEvents, usePatterns } from "@/lib/hooks";
 import { Activity, Calendar } from "lucide-react";
+import { use } from "react";
 
 interface StockPageProps {
-  params: { symbol: string };
+  params: Promise<{ symbol: string }>;
 }
 
 export default function StockPage({ params }: StockPageProps) {
-  const { symbol } = params;
+  const { symbol } = use(params);
   const upperSymbol = symbol.toUpperCase();
 
   return (

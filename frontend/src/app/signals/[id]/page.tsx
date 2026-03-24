@@ -7,13 +7,14 @@ import { SignalDetailPanel } from "@/components/features/SignalDetailPanel";
 import { ErrorBoundary, ErrorDisplay } from "@/components/ui/ErrorBoundary";
 import { SkeletonCard } from "@/components/ui/Skeleton";
 import { useSignalDetail } from "@/lib/hooks";
+import { use } from "react";
 
 interface SignalDetailPageProps {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 export default function SignalDetailPage({ params }: SignalDetailPageProps) {
-  const { id } = params;
+  const { id } = use(params);
   return (
     <>
       <TopBar title="Signal Detail" subtitle="Deep dive analysis" />
