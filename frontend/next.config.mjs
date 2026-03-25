@@ -1,19 +1,15 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   async rewrites() {
-    // Determine the base backend URL, stripping trailing slashes if present
-    let baseUrl = process.env.BACKEND_URL || 'http://127.0.0.1:8000/api';
-    if (baseUrl.endsWith('/')) {
-      baseUrl = baseUrl.slice(0, -1);
-    }
+    // In Docker: BACKEND_URL is not set so Next.js itself isn't used for proxying  
+    // (Nginx directly routes /api/ to backend). This rewrite only applies when
+    // running `npm run dev` locally, where BACKEND_URL=http://localhost:8000/api
+    const backendBase = process.env.BACKEND_URL || 'http://127.0.0.1:8000/api';
     
-    // Ensure :path* is appended to whatever the base URL is
-    let destination = baseUrl.endsWith(':path*') ? baseUrl : `${baseUrl}/:path*`;
-
     return [
       {
         source: '/api/:path*',
-        destination: destination,
+        destination: `${backendBase}/:path*`,
       },
     ];
   },
