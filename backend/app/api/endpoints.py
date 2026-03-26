@@ -180,6 +180,30 @@ async def search_stock(q: str = Query(...)):
     if not sym.endswith(".NS"): sym += ".NS"
     return {"symbol": sym, "name": q.upper()}
 
+@router.get("/search/suggestions")
+async def search_stock_suggestions(q: str = Query(...)):
+    """Resolves search prefixes into autocomplete suggestions."""
+    import requests
+    headers = {"User-Agent": "Mozilla/5.0"}
+    res = requests.get(f"https://query2.finance.yahoo.com/v1/finance/search?q={q}&quotesCount=6&newsCount=0", headers=headers)
+    results = []
+    if res.status_code == 200:
+        quotes = res.json().get("quotes", [])
+        for q_dict in quotes:
+            ex = q_dict.get('exchange', '')
+            sym = q_dict.get('symbol', '')
+            # Allow Indian stocks specifically
+            if ex in ['NSI', 'BSE'] and not sym.endswith(".BO"):
+                results.append({"symbol": sym, "name": q_dict.get('shortname', sym), "exchange": ex})
+    
+    # Fallback to direct input pattern if none resolved
+    if not results:
+        sym = q.upper()
+        if not sym.endswith(".NS"): sym += ".NS"
+        results.append({"symbol": sym, "name": q.upper(), "exchange": "Custom"})
+
+    return results
+
 
 @router.get("/stock/{symbol}")
 async def get_stock_ohlcv(

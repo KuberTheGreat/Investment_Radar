@@ -164,6 +164,15 @@ export const fetchEvents = (symbol: string) =>
 export const searchStock = (query: string) =>
   apiFetch<{ symbol: string; name: string }>(`/search`, { q: query });
 
+export interface SearchSuggestion {
+  symbol: string;
+  name: string;
+  exchange?: string;
+}
+
+export const fetchSearchSuggestions = (query: string) =>
+  apiFetch<SearchSuggestion[]>(`/search/suggestions`, { q: query });
+
 export const fetchPipelineHealth = () =>
   apiFetch<PipelineHealth>("/health/pipeline");
 
