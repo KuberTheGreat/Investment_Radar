@@ -21,7 +21,7 @@ interface CandlestickChartProps {
 }
 
 export function CandlestickChart({ symbol }: CandlestickChartProps) {
-  const [timeframe, setTimeframe] = useState("15m");
+  const [timeframe, setTimeframe] = useState("1d");
   const chartContainerRef = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const chartRef = useRef<any>(null);

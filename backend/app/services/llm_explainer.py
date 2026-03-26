@@ -48,7 +48,10 @@ Return ONLY valid JSON with exactly three keys:
 - "paragraph": A concise 2-3 sentence explanation of the pattern and its significance for an Indian retail investor.
 - "deep_dive": A detailed analysis covering: (a) technical pattern interpretation, (b) historical win rate context, (c) confluence with corporate events if any, (d) key risks. End with: 'This is not financial advice.'
 
-Rules: No hallucinated statistics. Ground everything in the provided data. No markdown, just JSON.
+Rules: 
+1. No hallucinated statistics. Ground everything in the provided data. 
+2. If "recent_news" indicates no news was found, DO NOT refuse to answer. Generate the entire analysis based purely on the technical pattern, historical win rate, and corporate events provided.
+3. No markdown, just JSON.
 """
 
     def _build_summary_prompt(self, signal_context: dict) -> str:

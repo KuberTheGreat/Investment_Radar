@@ -22,6 +22,7 @@ export default function StockPage({ params }: StockPageProps) {
   const upperSymbol = symbol.toUpperCase();
   
   const { data: ohlcvData, isLoading: isDataLoading } = useOHLCV(upperSymbol, "15m");
+  const { data: dayData } = useOHLCV(upperSymbol, "1d");
   const { mutate: triggerAnalysis, isPending: isAnalyzing } = useOnDemandAnalysis();
 
   useEffect(() => {
@@ -30,11 +31,15 @@ export default function StockPage({ params }: StockPageProps) {
     }
   }, [isDataLoading, ohlcvData, upperSymbol, triggerAnalysis, isAnalyzing]);
 
+  const latestPrice = dayData && dayData.length > 0 
+    ? `₹${dayData[dayData.length - 1].close.toFixed(2)}`
+    : "Loading price...";
+
   return (
     <>
       <TopBar
         title={upperSymbol}
-        subtitle="Interactive candlestick chart with pattern & event overlays"
+        subtitle={`Current Price: ${latestPrice} • Interactive candlestick chart`}
       />
       <PageWrapper>
         <Link
