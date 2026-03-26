@@ -7,10 +7,15 @@ import { HealthIndicator } from "@/components/features/HealthIndicator";
 import { LiveAlertFeed } from "@/components/features/LiveAlertFeed";
 import { SignalList } from "@/components/features/SignalList";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
-import { usePipelineHealth } from "@/lib/hooks";
+import { usePipelineHealth, useWatchlist } from "@/lib/hooks";
+import { useAuth } from "@/lib/authContext";
+import { useState } from "react";
 
 export default function DashboardPage() {
   const { data: health } = usePipelineHealth();
+  const [activeTab, setActiveTab] = useState<"discover" | "watchlist">("discover");
+  const { data: watchlist } = useWatchlist();
+  const { token, setShowAuthModal } = useAuth() as any;
 
   return (
     <>
@@ -59,24 +64,66 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
           {/* Top opportunities */}
           <div className="xl:col-span-2">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-semibold text-foreground">
-                Top 10 Opportunities
-              </h3>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+              <div className="flex bg-surface-2 p-1 rounded-lg w-fit border border-border-subtle">
+                <button 
+                  onClick={() => setActiveTab("discover")}
+                  className={`px-4 py-1.5 text-xs font-semibold rounded-md transition-all ${activeTab === "discover" ? "bg-surface shadow-sm text-foreground" : "text-muted hover:text-foreground"}`}
+                >
+                  Discover
+                </button>
+                <button 
+                  onClick={() => setActiveTab("watchlist")}
+                  className={`px-4 py-1.5 text-xs font-semibold rounded-md transition-all ${activeTab === "watchlist" ? "bg-surface shadow-sm text-foreground flex items-center gap-1.5" : "text-muted hover:text-foreground flex items-center gap-1.5"}`}
+                >
+                  My Watchlist
+                  {token && watchlist && <span className="text-[10px] bg-accent/20 text-accent px-1.5 rounded">{watchlist.length}</span>}
+                </button>
+              </div>
               <Link
                 href="/signals"
-                className="flex items-center gap-1 text-xs text-accent hover:underline"
+                className="flex items-center gap-1 text-xs text-accent hover:underline mb-2 sm:mb-0"
               >
                 View all <ArrowRight className="w-3 h-3" />
               </Link>
             </div>
-            <ErrorBoundary context="SignalList">
-              <SignalList
-                filters={{ min_win_rate: 50, deduplicate_symbol: true }}
-                pageSize={10}
-                layout="grid"
-              />
-            </ErrorBoundary>
+            
+            {activeTab === "discover" ? (
+              <ErrorBoundary context="SignalList">
+                <SignalList
+                  filters={{ min_win_rate: 50, deduplicate_symbol: true }}
+                  pageSize={10}
+                  layout="grid"
+                />
+              </ErrorBoundary>
+            ) : (
+              <div className="space-y-4 min-h-[400px]">
+                {!token ? (
+                  <div className="p-8 mt-12 text-center bg-surface border border-border-subtle rounded-xl flex flex-col items-center glass-card max-w-lg mx-auto">
+                    <p className="text-sm text-muted mb-4 max-w-sm">Sign in to track your favorite Indian equities and receive personalized background AI processing pipelines.</p>
+                    <button onClick={() => setShowAuthModal?.(true)} className="px-5 py-2.5 bg-accent text-white rounded font-semibold transition hover:bg-accent/90">Sign In / Register</button>
+                  </div>
+                ) : !watchlist || watchlist.length === 0 ? (
+                  <div className="p-8 mt-12 text-center bg-surface border border-border-subtle rounded-xl glass-card max-w-lg mx-auto">
+                    <p className="text-sm font-semibold text-foreground mb-1">Your Watchlist is empty.</p>
+                    <p className="text-xs text-muted mt-2 max-w-sm mx-auto">Search for any NSE stock, navigate to its analysis page, and click the Star icon to configure background tracking.</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4 animate-in fade-in zoom-in-95 duration-300">
+                    {watchlist.map((symbol) => (
+                      <Link
+                        key={symbol}
+                        href={`/stock/${symbol.replace(".NS", "")}`}
+                        className="p-4 bg-surface hover:bg-surface-2 transition-colors border border-border-subtle rounded-xl flex items-center justify-between group glass-card shadow-sm"
+                      >
+                        <span className="font-bold text-sm tracking-tight whitespace-nowrap overflow-hidden text-ellipsis mr-2">{symbol.replace(".NS", "")}</span>
+                        <ArrowRight className="w-4 h-4 flex-shrink-0 text-muted group-hover:text-accent group-hover:translate-x-0.5 transition-all" />
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Live alert feed */}

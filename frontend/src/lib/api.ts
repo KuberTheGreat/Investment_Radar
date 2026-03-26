@@ -114,9 +114,18 @@ async function apiFetch<T>(
 
   logger.info("api", `Fetching ${urlString}`, options.method || 'GET');
 
+  const headers = { Accept: "application/json", ...options.headers } as Record<string, string>;
+  
+  if (typeof window !== "undefined") {
+    const token = localStorage.getItem("token");
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+  }
+
   const res = await fetch(urlString, {
     ...options,
-    headers: { Accept: "application/json", ...options.headers },
+    headers,
   });
 
   if (!res.ok) {
@@ -175,6 +184,15 @@ export const fetchSearchSuggestions = (query: string) =>
 
 export const fetchPipelineHealth = () =>
   apiFetch<PipelineHealth>("/health/pipeline");
+
+export const fetchWatchlist = () => 
+  apiFetch<string[]>("/watchlist");
+
+export const addToWatchlist = (symbol: string) => 
+  apiFetch<{status: string}>(`/watchlist/${symbol}`, undefined, { method: "POST" });
+
+export const removeFromWatchlist = (symbol: string) => 
+  apiFetch<{status: string}>(`/watchlist/${symbol}`, undefined, { method: "DELETE" });
 
 // ─── SSE connection factory ───────────────────────────────────────────────────
 

@@ -9,9 +9,12 @@ import { ErrorBoundary, ErrorDisplay } from "@/components/ui/ErrorBoundary";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Skeleton } from "@/components/ui/Skeleton";
-import { useEvents, usePatterns, useOHLCV, useOnDemandAnalysis } from "@/lib/hooks";
-import { Activity, Calendar, Loader2 } from "lucide-react";
-import { use, useEffect, useRef } from "react";
+import { useEvents, usePatterns, useOHLCV, useOnDemandAnalysis, useWatchlist } from "@/lib/hooks";
+import { Activity, Calendar, Loader2, Star } from "lucide-react";
+import { use, useEffect, useRef, useState } from "react";
+import { useAuth } from "@/lib/authContext";
+import { useQueryClient } from "@tanstack/react-query";
+import { addToWatchlist, removeFromWatchlist } from "@/lib/api";
 
 interface StockPageProps {
   params: Promise<{ symbol: string }>;
@@ -25,6 +28,33 @@ export default function StockPage({ params }: StockPageProps) {
   const { data: dayData } = useOHLCV(upperSymbol, "1d");
   const { mutate: triggerAnalysis, isPending: isAnalyzing } = useOnDemandAnalysis();
   const hasTriggeredRef = useRef(false);
+
+  const { token, setShowAuthModal } = useAuth() as any; // Cast for optional modal toggle if exposed, else generic alert
+  const { data: watchlist } = useWatchlist();
+  const queryClient = useQueryClient();
+  const [isToggling, setIsToggling] = useState(false);
+  
+  const isStarred = watchlist?.includes(upperSymbol);
+
+  const handleStarToggle = async () => {
+    if (!token) {
+      alert("Please sign in from the TopBar to add to your Watchlist");
+      return;
+    }
+    setIsToggling(true);
+    try {
+      if (isStarred) {
+        await removeFromWatchlist(upperSymbol);
+      } else {
+        await addToWatchlist(upperSymbol);
+      }
+      queryClient.invalidateQueries({ queryKey: ["watchlist"] });
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsToggling(false);
+    }
+  };
 
   useEffect(() => {
     const isMissingData = (!isDataLoading && ((ohlcvData && ohlcvData.length === 0) || (dayData && dayData.length === 0)));
@@ -56,7 +86,17 @@ export default function StockPage({ params }: StockPageProps) {
         <div className="flex flex-col md:flex-row md:items-end justify-between mb-6 p-6 rounded-2xl bg-surface border border-border-subtle shadow-sm relative overflow-hidden glass-card">
           <div className="absolute top-0 right-0 w-64 h-64 bg-accent/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3"></div>
           <div className="relative z-10">
-            <h1 className="text-4xl font-extrabold text-foreground mb-1 tracking-tight">{upperSymbol}</h1>
+            <div className="flex items-center gap-3 mb-1">
+              <h1 className="text-4xl font-extrabold text-foreground tracking-tight">{upperSymbol}</h1>
+              <button 
+                onClick={handleStarToggle}
+                disabled={isToggling}
+                className={`p-2 rounded-full transition-colors flex items-center justify-center ${isStarred ? "bg-accent/10 text-accent hover:bg-accent/20" : "bg-surface-2 text-muted hover:text-foreground hover:bg-surface-3"}`}
+                title={isStarred ? "Remove from Watchlist" : "Add to Watchlist"}
+              >
+                {isToggling ? <Loader2 className="w-5 h-5 animate-spin" /> : <Star className={`w-5 h-5 ${isStarred ? "fill-current" : ""}`} />}
+              </button>
+            </div>
             <p className="text-sm font-medium text-muted">Advanced Market Intelligence & Interactive Charting</p>
           </div>
           <div className="mt-6 md:mt-0 text-left md:text-right relative z-10">
