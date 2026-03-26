@@ -21,7 +21,7 @@ config = context.config
 
 # Override sqlalchemy.url with our DATABASE_URL
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql+asyncpg://investor_user:investor_password@localhost:5433/investorradar")
-config.set_main_option("sqlalchemy.url", DATABASE_URL)
+config.set_main_option("sqlalchemy.url", DATABASE_URL.replace('%', '%%'))
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.

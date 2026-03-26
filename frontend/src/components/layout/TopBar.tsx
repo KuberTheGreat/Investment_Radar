@@ -1,3 +1,5 @@
+"use client";
+
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Search, Bell, BellRing, Loader2, UserCircle, LogOut } from "lucide-react";

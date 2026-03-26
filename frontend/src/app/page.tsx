@@ -1,5 +1,5 @@
 "use client";
-import { TrendingUp, Zap, BarChart2, ArrowRight } from "lucide-react";
+import { TrendingUp, Zap, BarChart2, ArrowRight, Search, PlusCircle } from "lucide-react";
 import Link from "next/link";
 import { PageWrapper } from "@/components/layout/PageWrapper";
 import { TopBar } from "@/components/layout/TopBar";
@@ -107,10 +107,25 @@ export default function DashboardPage() {
                 ) : !Array.isArray(watchlist) || watchlist.length === 0 ? (
                   <div className="p-8 mt-12 text-center bg-surface border border-border-subtle rounded-xl glass-card max-w-lg mx-auto">
                     <p className="text-sm font-semibold text-foreground mb-1">Your Watchlist is empty.</p>
-                    <p className="text-xs text-muted mt-2 max-w-sm mx-auto">Search for any NSE stock, navigate to its analysis page, and click the Star icon to configure background tracking.</p>
+                    <p className="text-xs text-muted mt-2 mb-6 max-w-sm mx-auto">Search for any NSE stock, navigate to its analysis page, and click the Star icon to configure background tracking.</p>
+                    <button 
+                      onClick={() => (document.querySelector('input[placeholder="Search stock (e.g., ZOMATO)"]') as HTMLInputElement)?.focus()} 
+                      className="px-5 py-2.5 bg-accent text-white rounded font-semibold transition hover:bg-accent/90 inline-flex items-center gap-2 text-sm shadow-md"
+                    >
+                      <Search className="w-4 h-4" /> Search Stocks to Add
+                    </button>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4 animate-in fade-in zoom-in-95 duration-300">
+                  <div className="space-y-4">
+                    <div className="flex justify-end">
+                      <button 
+                        onClick={() => (document.querySelector('input[placeholder="Search stock (e.g., ZOMATO)"]') as HTMLInputElement)?.focus()}
+                        className="text-xs font-semibold text-accent hover:text-accent/80 flex items-center gap-1.5 transition-colors"
+                      >
+                        <PlusCircle className="w-3.5 h-3.5" /> Add Stock
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4 animate-in fade-in zoom-in-95 duration-300">
                     {watchlist.map((symbol: string) => (
                       <Link
                         key={symbol}
@@ -122,6 +137,7 @@ export default function DashboardPage() {
                       </Link>
                     ))}
                   </div>
+                </div>
                 )}
               </div>
             )}
