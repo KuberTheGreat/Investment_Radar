@@ -27,11 +27,12 @@ export default function StockPage({ params }: StockPageProps) {
   const hasTriggeredRef = useRef(false);
 
   useEffect(() => {
-    if (!isDataLoading && ohlcvData && ohlcvData.length === 0 && !isAnalyzing && !hasTriggeredRef.current) {
+    const isMissingData = (!isDataLoading && ((ohlcvData && ohlcvData.length === 0) || (dayData && dayData.length === 0)));
+    if (isMissingData && !isAnalyzing && !hasTriggeredRef.current) {
       hasTriggeredRef.current = true;
       triggerAnalysis(upperSymbol);
     }
-  }, [isDataLoading, ohlcvData, upperSymbol, triggerAnalysis, isAnalyzing]);
+  }, [isDataLoading, ohlcvData, dayData, upperSymbol, triggerAnalysis, isAnalyzing]);
 
   const latestPrice = dayData && dayData.length > 0 
     ? `₹${dayData[dayData.length - 1].close.toFixed(2)}`

@@ -7,10 +7,10 @@ from app.models.market_data import OHLCCandle
 from sqlalchemy.dialects.postgresql import insert
 import pytz
 
-# Top 10 Nifty stocks by weight for the background radar loop
+# Top 10 custom stocks for the background radar loop (including user requests)
 NIFTY_TOP_10 = [
-    "RELIANCE.NS", "HDFCBANK.NS", "ICICIBANK.NS", "INFY.NS", "ITC.NS",
-    "TCS.NS", "LT.NS", "BAJFINANCE.NS", "KOTAKBANK.NS", "AXISBANK.NS"
+    "ZOMATO.NS", "TATAMOTORS.NS", "SBIN.NS", "RELIANCE.NS", "TCS.NS",
+    "HDFCBANK.NS", "ICICIBANK.NS", "INFY.NS", "ITC.NS", "LT.NS"
 ]
 
 IST = pytz.timezone('Asia/Kolkata')
@@ -73,5 +73,6 @@ async def fetch_and_store_klines(symbol: str, period: str = "1d", interval: str 
 async def run_market_data_pipeline():
     """Runs the pipeline for all target symbols."""
     print("Running market data pipeline iteration...")
-    tasks = [fetch_and_store_klines(symbol, period="5d", interval="15m") for symbol in NIFTY_TOP_10]
-    await asyncio.gather(*tasks)
+    tasks_15m = [fetch_and_store_klines(symbol, period="5d", interval="15m") for symbol in NIFTY_TOP_10]
+    tasks_1d = [fetch_and_store_klines(symbol, period="2mo", interval="1d") for symbol in NIFTY_TOP_10]
+    await asyncio.gather(*(tasks_15m + tasks_1d))

@@ -16,7 +16,6 @@ import { useState } from "react";
 const NAV_ITEMS = [
   { href: "/", icon: LayoutDashboard, label: "Dashboard" },
   { href: "/signals", icon: Radio, label: "Signal Radar" },
-  { href: "/stock/RELIANCE", icon: BarChart2, label: "Charts" },
 ];
 
 export function Sidebar() {
