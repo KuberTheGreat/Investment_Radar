@@ -61,7 +61,7 @@ export default function DashboardPage() {
           <div className="xl:col-span-2">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-semibold text-foreground">
-                Top Opportunities
+                Top 10 Opportunities
               </h3>
               <Link
                 href="/signals"
@@ -72,8 +72,8 @@ export default function DashboardPage() {
             </div>
             <ErrorBoundary context="SignalList">
               <SignalList
-                filters={{ min_win_rate: 50 }}
-                pageSize={6}
+                filters={{ min_win_rate: 50, deduplicate_symbol: true }}
+                pageSize={10}
                 layout="grid"
               />
             </ErrorBoundary>

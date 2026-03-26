@@ -29,6 +29,7 @@ async def get_signals(
     min_confluence: Optional[int] = None,         # 0-3
     high_confluence_only: bool = False,
     archived: bool = False,                       # include is_active=FALSE
+    deduplicate_symbol: bool = False,
     db: AsyncSession = Depends(get_db)
 ):
     stmt = select(Signal)
@@ -42,8 +43,7 @@ async def get_signals(
     if high_confluence_only:
         stmt = stmt.where(Signal.high_confluence == True)
     if direction:
-        # direction comes from the linked detected_pattern; stored in signal_type direction prefix for opportunity signals
-        # For pattern signals, join DetectedPattern to filter by signal_direction
+        # direction comes from the linked detected_pattern
         stmt = stmt.join(DetectedPattern, Signal.pattern_id == DetectedPattern.id, isouter=True)
         stmt = stmt.where(DetectedPattern.signal_direction == direction.lower())
     if min_win_rate is not None:
@@ -51,15 +51,27 @@ async def get_signals(
     if min_confluence is not None:
         stmt = stmt.where(Signal.confluence_score >= min_confluence)
 
-    stmt = stmt.order_by(desc(Signal.signal_rank), desc(Signal.created_at)).offset(skip).limit(limit)
+    # We fetch an excess amount to do memory deduplication, since SQL DISTINCT ON interferes with global order by rank
+    stmt = stmt.order_by(desc(Signal.signal_rank), desc(Signal.created_at)).limit(300)
     result = await db.execute(stmt)
-    signals = result.scalars().all()
+    all_signals = result.scalars().all()
+    
+    unique_signals = []
+    seen_symbols = set()
+    for s in all_signals:
+        if deduplicate_symbol:
+            if s.symbol in seen_symbols:
+                continue
+            seen_symbols.add(s.symbol)
+        unique_signals.append(s)
+
+    paged_signals = unique_signals[skip : skip + limit]
 
     return {
-        "data": [_signal_to_dict(s) for s in signals],
+        "data": [_signal_to_dict(s) for s in paged_signals],
         "skip": skip,
         "limit": limit,
-        "total": len(signals)
+        "total": len(unique_signals)
     }
 
 

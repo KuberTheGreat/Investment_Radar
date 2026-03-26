@@ -73,6 +73,7 @@ export default function SignalsPage() {
               direction: filters.direction,
               min_confluence: filters.min_confluence,
               high_confluence_only: filters.high_confluence_only,
+              deduplicate_symbol: true,
             }}
             pageSize={20}
             layout={layout}

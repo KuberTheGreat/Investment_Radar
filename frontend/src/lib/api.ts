@@ -89,6 +89,7 @@ export interface SignalFilters {
   min_confluence?: number;
   high_confluence_only?: boolean;
   archived?: boolean;
+  deduplicate_symbol?: boolean;
 }
 
 // ─── Core fetch helper ────────────────────────────────────────────────────────
