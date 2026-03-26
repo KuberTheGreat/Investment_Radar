@@ -146,6 +146,29 @@ async def analyze_stock_on_demand(symbol: str = Path(...), db: AsyncSession = De
 
 # ── Stock Data ────────────────────────────────────────────────────────────────
 
+@router.get("/search")
+async def search_stock(q: str = Query(...)):
+    """Resolves generic search terms into precise Yahoo Finance tickers."""
+    import requests
+    headers = {"User-Agent": "Mozilla/5.0"}
+    res = requests.get(f"https://query2.finance.yahoo.com/v1/finance/search?q={q}&quotesCount=5&newsCount=0", headers=headers)
+    if res.status_code == 200:
+        data = res.json()
+        quotes = data.get("quotes", [])
+        for q_dict in quotes:
+            ex = q_dict.get('exchange', '')
+            sym = q_dict.get('symbol', '')
+            if ex in ['NSI', 'BSE'] and not sym.endswith(".BO"):
+                return {"symbol": sym, "name": q_dict.get('shortname')}
+        if quotes:
+            return {"symbol": quotes[0].get('symbol'), "name": quotes[0].get('shortname')}
+    
+    # Fallback to direct input
+    sym = q.upper()
+    if not sym.endswith(".NS"): sym += ".NS"
+    return {"symbol": sym, "name": q.upper()}
+
+
 @router.get("/stock/{symbol}")
 async def get_stock_ohlcv(
     symbol: str = Path(...),

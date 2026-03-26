@@ -11,7 +11,7 @@ import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useEvents, usePatterns, useOHLCV, useOnDemandAnalysis } from "@/lib/hooks";
 import { Activity, Calendar, Loader2 } from "lucide-react";
-import { use, useEffect } from "react";
+import { use, useEffect, useRef } from "react";
 
 interface StockPageProps {
   params: Promise<{ symbol: string }>;
@@ -24,9 +24,11 @@ export default function StockPage({ params }: StockPageProps) {
   const { data: ohlcvData, isLoading: isDataLoading } = useOHLCV(upperSymbol, "15m");
   const { data: dayData } = useOHLCV(upperSymbol, "1d");
   const { mutate: triggerAnalysis, isPending: isAnalyzing } = useOnDemandAnalysis();
+  const hasTriggeredRef = useRef(false);
 
   useEffect(() => {
-    if (!isDataLoading && ohlcvData && ohlcvData.length === 0 && !isAnalyzing) {
+    if (!isDataLoading && ohlcvData && ohlcvData.length === 0 && !isAnalyzing && !hasTriggeredRef.current) {
+      hasTriggeredRef.current = true;
       triggerAnalysis(upperSymbol);
     }
   }, [isDataLoading, ohlcvData, upperSymbol, triggerAnalysis, isAnalyzing]);

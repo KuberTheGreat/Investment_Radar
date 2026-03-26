@@ -3,6 +3,7 @@ import { useRouter } from "next/navigation";
 import { Search, Bell, BellRing } from "lucide-react";
 import { useAlerts } from "@/lib/hooks";
 import { cn } from "@/components/ui/cn";
+import { searchStock } from "@/lib/api";
 
 interface TopBarProps {
   title: string;
@@ -15,10 +16,19 @@ export function TopBar({ title, subtitle }: TopBarProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const router = useRouter();
 
-  const handleSearch = (e: React.FormEvent) => {
+  const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      router.push(`/stock/${searchQuery.trim().toUpperCase()}`);
+      try {
+        const res = await searchStock(searchQuery.trim());
+        if (res && res.symbol) {
+          router.push(`/stock/${res.symbol.toUpperCase()}`);
+        } else {
+          router.push(`/stock/${searchQuery.trim().toUpperCase()}`);
+        }
+      } catch (err) {
+        router.push(`/stock/${searchQuery.trim().toUpperCase()}`);
+      }
       setSearchQuery("");
     }
   };
