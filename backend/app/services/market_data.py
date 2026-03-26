@@ -45,7 +45,7 @@ async def fetch_and_store_klines(symbol: str, period: str = "1d", interval: str 
                 stmt = insert(OHLCCandle).values(
                     symbol=symbol.replace(".NS", ""),
                     timestamp=candle_time,
-                    timeframe="15m" if interval == "15m" else "1d",
+                    timeframe=interval,
                     open=row['Open'],
                     high=row['High'],
                     low=row['Low'],
@@ -71,8 +71,21 @@ async def fetch_and_store_klines(symbol: str, period: str = "1d", interval: str 
         print(f"Error fetching data for {symbol}: {e}")
 
 async def run_market_data_pipeline():
-    """Runs the pipeline for all target symbols."""
+    """Runs the pipeline for all target symbols across active user watchlists."""
     print("Running market data pipeline iteration...")
-    tasks_15m = [fetch_and_store_klines(symbol, period="5d", interval="15m") for symbol in NIFTY_TOP_10]
-    tasks_1d = [fetch_and_store_klines(symbol, period="2mo", interval="1d") for symbol in NIFTY_TOP_10]
-    await asyncio.gather(*(tasks_15m + tasks_1d))
+    
+    from app.models.auth import Watchlist
+    from sqlalchemy import select
+    
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(select(Watchlist.symbol).distinct())
+        db_symbols = result.scalars().all()
+        
+    # Inject default minimum sandbox anchor to ensure radar operates even when nobody is logged in
+    active_universe = set([sym + ".NS" for sym in db_symbols] + ["RELIANCE.NS"])
+    
+    tasks_15m = [fetch_and_store_klines(symbol, period="5d", interval="15m") for symbol in active_universe]
+    tasks_1d = [fetch_and_store_klines(symbol, period="2mo", interval="1d") for symbol in active_universe]
+    
+    if tasks_15m or tasks_1d:
+        await asyncio.gather(*(tasks_15m + tasks_1d), return_exceptions=True)

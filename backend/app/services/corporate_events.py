@@ -74,10 +74,20 @@ async def fetch_and_store_bse_bulk_deals():
         pass
 
 async def run_corporate_events_pipeline():
-    """Runs the scheduled corporate events ingestion for NIFTY_TOP_10."""
+    """Runs the scheduled corporate events ingestion for active user Watchlists."""
     print("Running Corporate Events Ingestion Pipeline...")
     await fetch_and_store_bse_bulk_deals()
     
-    from app.services.market_data import NIFTY_TOP_10
-    tasks = [fetch_and_store_yahoo_news(sym) for sym in NIFTY_TOP_10]
-    await asyncio.gather(*tasks, return_exceptions=True)
+    from app.models.auth import Watchlist
+    from sqlalchemy import select
+    
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(select(Watchlist.symbol).distinct())
+        db_symbols = result.scalars().all()
+        
+    # Default guaranteed anchor for hackathon testing visibility
+    active_universe = set([sym + ".NS" for sym in db_symbols] + ["RELIANCE.NS"])
+    
+    tasks = [fetch_and_store_yahoo_news(sym) for sym in active_universe]
+    if tasks:
+        await asyncio.gather(*tasks, return_exceptions=True)
