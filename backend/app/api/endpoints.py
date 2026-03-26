@@ -129,6 +129,8 @@ async def analyze_stock_on_demand(symbol: str = Path(...), db: AsyncSession = De
     from app.services.market_data import fetch_and_store_klines
     from app.services.pattern_detector import detect_patterns_for_symbol
     from app.services.confluence_scorer import process_new_patterns
+    from app.services.opportunity_radar import detect_opportunities
+    from app.services.corporate_events import fetch_and_store_yahoo_news
     import logging
     
     logger = logging.getLogger("investorradar.api")
@@ -139,15 +141,23 @@ async def analyze_stock_on_demand(symbol: str = Path(...), db: AsyncSession = De
     
     logger.info(f"On-Demand Analysis started for {symbol_ns}")
     try:
-        # 1. Fetch market data (15m and 1d)
+        # 1. Fetch market data exhaustively (1m, 5m, 15m and 1d) so all UI tabs populate
+        await fetch_and_store_klines(symbol_ns, period="1d", interval="1m")
+        await fetch_and_store_klines(symbol_ns, period="5d", interval="5m")
         await fetch_and_store_klines(symbol_ns, period="5d", interval="15m")
         await fetch_and_store_klines(symbol_ns, period="2mo", interval="1d")
         
-        # 2. Detect patterns
+        # 2. Scrape Real-Time Corporate News
+        await fetch_and_store_yahoo_news(symbol_ns)
+        
+        # 3. Detect patterns
         await detect_patterns_for_symbol(base_symbol, timeframe="15m")
         await detect_patterns_for_symbol(base_symbol, timeframe="1d")
         
-        # 3. Score confluence (this naturally picks up newly inserted patterns)
+        # 4. Compile Event Anomalies into Opportunity Signals
+        await detect_opportunities()
+        
+        # 5. Score final confluences
         await process_new_patterns()
         
         return {"status": "success", "message": f"Successfully ran analysis pipeline for {base_symbol}"}
