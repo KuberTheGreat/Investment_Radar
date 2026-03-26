@@ -2,7 +2,7 @@ import asyncio
 import logging
 from typing import AsyncGenerator
 import json
-from groq import AsyncGroq
+from anthropic import AsyncAnthropic
 from app.core.config import settings
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -13,25 +13,25 @@ from app.services.rag import RAGManager
 
 logger = logging.getLogger(__name__)
 
-# ── Global Semaphore — only 1 Groq call at a time ─────────────────────────────
-_groq_semaphore = asyncio.Semaphore(1)
+# ── Global Semaphore — only 1 Anthropic call at a time ─────────────────────────────
+_anthropic_semaphore = asyncio.Semaphore(1)
 # Track signals currently being generated to prevent duplicate parallel calls
 _in_progress: set = set()
 
 
 class LLMExplainerService:
     def __init__(self):
-        self.api_key = settings.GROQ_API_KEY
+        self.api_key = settings.ANTHROPIC_API_KEY
         if self.api_key:
-            self.client = AsyncGroq(api_key=self.api_key)
-            logger.info("LLMExplainerService: Groq client initialized.")
+            self.client = AsyncAnthropic(api_key=self.api_key)
+            logger.info("LLMExplainerService: Anthropic client initialized.")
         else:
             self.client = None
-            logger.warning("LLMExplainerService: GROQ_API_KEY not set — LLM disabled.")
+            logger.warning("LLMExplainerService: ANTHROPIC_API_KEY not set — LLM disabled.")
 
-        self.model = settings.GROQ_MODEL
-        # Smaller, faster model for cheap one_liner/paragraph pre-generation
-        self.summary_model = "llama-3.1-8b-instant"
+        self.model = "claude-sonnet-4-6"
+        # The SRS explicitly mandates claude-sonnet-4-6 for ALL proxy layers
+        self.summary_model = "claude-sonnet-4-6"
         self.redis_client = redis.from_url(settings.REDIS_URL, decode_responses=True)
         self.web_searcher = WebSearcher()
         self.rag_manager = RAGManager()
@@ -93,36 +93,35 @@ Return ONLY valid JSON with exactly two keys:
             pass
         return raw
 
-    async def _call_groq(self, prompt: str, model: str) -> dict | None:
-        """Calls Groq API with global semaphore. Returns parsed JSON or None."""
+    async def _call_anthropic(self, prompt: str, model: str) -> dict | None:
+        """Calls Anthropic API with global semaphore. Returns parsed JSON or None."""
         if not self.client:
-            logger.error("_call_groq: No Groq client available.")
+            logger.error("_call_anthropic: No Anthropic client available.")
             return None
 
-        logger.info(f"_call_groq: Waiting for semaphore (model={model})...")
-        async with _groq_semaphore:
-            logger.info(f"_call_groq: Acquired semaphore. Calling Groq API (model={model})...")
+        logger.info(f"_call_anthropic: Waiting for semaphore (model={model})...")
+        async with _anthropic_semaphore:
+            logger.info(f"_call_anthropic: Acquired semaphore. Calling Anthropic API (model={model})...")
             try:
-                response = await self.client.chat.completions.create(
+                response = await self.client.messages.create(
                     model=model,
+                    system="You are a financial analyst. Respond ONLY in valid JSON.",
                     messages=[
-                        {"role": "system", "content": "You are a financial analyst. Respond ONLY in valid JSON."},
                         {"role": "user", "content": prompt}
                     ],
-                    response_format={"type": "json_object"},
                     max_tokens=1500,
                 )
-                text = response.choices[0].message.content
+                text = response.content[0].text
                 # Strip markdown fences if present
                 if "```json" in text:
                     text = text.split("```json")[1].split("```")[0].strip()
                 elif "```" in text:
                     text = text.split("```")[1].strip()
                 parsed = json.loads(text)
-                logger.info(f"_call_groq: Success. Keys returned: {list(parsed.keys())}")
+                logger.info(f"_call_anthropic: Success. Keys returned: {list(parsed.keys())}")
                 return parsed
             except Exception as e:
-                logger.error(f"_call_groq: Groq API error — {type(e).__name__}: {e}")
+                logger.error(f"_call_anthropic: Anthropic API error — {type(e).__name__}: {e}")
                 return None
 
     async def generate_summary(self, db: AsyncSession, signal_id: str) -> bool:
@@ -159,7 +158,7 @@ Return ONLY valid JSON with exactly two keys:
             }
 
             logger.info(f"generate_summary: Generating for signal {signal_id_str} ({signal.symbol})")
-            parsed = await self._call_groq(self._build_summary_prompt(context), self.summary_model)
+            parsed = await self._call_anthropic(self._build_summary_prompt(context), self.summary_model)
             if not parsed:
                 return False
 
@@ -265,8 +264,8 @@ Return ONLY valid JSON with exactly two keys:
                 f"events={len(events_summary)}, news_items={len(news) if news else 0}"
             )
 
-            logger.info(f"generate_deep_dive: Calling Groq for deep dive on {signal_id_str}...")
-            parsed = await self._call_groq(self._build_prompt(context), self.model)
+            logger.info(f"generate_deep_dive: Calling Anthropic for deep dive on {signal_id_str}...")
+            parsed = await self._call_anthropic(self._build_prompt(context), self.model)
             if not parsed:
                 return None
 

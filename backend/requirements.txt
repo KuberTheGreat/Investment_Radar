@@ -4,7 +4,7 @@ sqlalchemy>=2.0.27
 alembic>=1.13.1
 redis>=5.0.1
 yfinance>=0.2.36
-groq>=0.4.2
+anthropic>=0.18.0
 apscheduler>=3.10.4
 git+https://github.com/BennyThadikaran/NseIndiaApi.git
 nsepython>=0.0.6
@@ -22,3 +22,4 @@ PyJWT>=2.8.0
 passlib[bcrypt]>=1.7.4
 bcrypt>=4.1.2
 
+google-auth>=2.27.0

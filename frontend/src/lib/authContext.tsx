@@ -1,52 +1,35 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
 
 interface AuthContextType {
   token: string | null;
   userId: string | null;
-  login: (token: string, userId: string) => void;
-  logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const { data: session } = useSession();
   const [token, setToken] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
-  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    // Restore session on mount
-    const storedToken = localStorage.getItem("token");
-    const storedUserId = localStorage.getItem("user_id");
-    if (storedToken && storedUserId) {
-      setToken(storedToken);
-      setUserId(storedUserId);
+    if (session?.backendToken && session?.user?.id) {
+      setToken(session.backendToken);
+      setUserId(session.user.id);
+      // For legacy sync with unmounted api.ts interceptors across the lifecycle bounds
+      localStorage.setItem("token", session.backendToken);
+    } else {
+      setToken(null);
+      setUserId(null);
+      localStorage.removeItem("token");
     }
-    setMounted(true);
-  }, []);
-
-  const login = (newToken: string, newUserId: string) => {
-    setToken(newToken);
-    setUserId(newUserId);
-    localStorage.setItem("token", newToken);
-    localStorage.setItem("user_id", newUserId);
-  };
-
-  const logout = () => {
-    setToken(null);
-    setUserId(null);
-    localStorage.removeItem("token");
-    localStorage.removeItem("user_id");
-  };
-
-  if (!mounted) {
-    return null; // Prevents hydration mismatch
-  }
+  }, [session]);
 
   return (
-    <AuthContext.Provider value={{ token, userId, login, logout }}>
+    <AuthContext.Provider value={{ token, userId }}>
       {children}
     </AuthContext.Provider>
   );

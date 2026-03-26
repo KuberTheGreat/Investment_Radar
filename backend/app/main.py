@@ -78,3 +78,9 @@ async def health_check():
 
 from app.api.endpoints import router as api_router
 app.include_router(api_router, prefix="/api")
+
+from app.api.auth import router as auth_router
+app.include_router(auth_router, prefix="/api/auth", tags=["auth"])
+
+from app.api.watchlist import router as watchlist_router
+app.include_router(watchlist_router, prefix="/api/watchlist", tags=["watchlist"])

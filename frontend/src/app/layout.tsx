@@ -3,6 +3,7 @@ import "./globals.css";
 import { QueryProvider } from "@/components/ui/QueryProvider";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { AuthProvider } from "@/lib/authContext";
+import { NextAuthProvider } from "@/components/providers/NextAuthProvider";
 
 export const metadata: Metadata = {
   title: "InvestorRadar — AI-Powered Market Intelligence",
@@ -27,12 +28,14 @@ export default function RootLayout({
         />
       </head>
       <body className="bg-background text-foreground antialiased" suppressHydrationWarning>
-        <AuthProvider>
-          <QueryProvider>
-            <Sidebar />
-            <div className="min-h-screen">{children}</div>
-          </QueryProvider>
-        </AuthProvider>
+        <NextAuthProvider>
+          <AuthProvider>
+            <QueryProvider>
+              <Sidebar />
+              <div className="min-h-screen">{children}</div>
+            </QueryProvider>
+          </AuthProvider>
+        </NextAuthProvider>
       </body>
     </html>
   );

@@ -9,13 +9,14 @@ import { SignalList } from "@/components/features/SignalList";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { usePipelineHealth, useWatchlist } from "@/lib/hooks";
 import { useAuth } from "@/lib/authContext";
+import { signIn } from "next-auth/react";
 import { useState } from "react";
 
 export default function DashboardPage() {
   const { data: health } = usePipelineHealth();
   const [activeTab, setActiveTab] = useState<"discover" | "watchlist">("discover");
   const { data: watchlist } = useWatchlist();
-  const { token, setShowAuthModal } = useAuth() as any;
+  const { token } = useAuth();
 
   return (
     <>
@@ -101,7 +102,7 @@ export default function DashboardPage() {
                 {!token ? (
                   <div className="p-8 mt-12 text-center bg-surface border border-border-subtle rounded-xl flex flex-col items-center glass-card max-w-lg mx-auto">
                     <p className="text-sm text-muted mb-4 max-w-sm">Sign in to track your favorite Indian equities and receive personalized background AI processing pipelines.</p>
-                    <button onClick={() => setShowAuthModal?.(true)} className="px-5 py-2.5 bg-accent text-white rounded font-semibold transition hover:bg-accent/90">Sign In / Register</button>
+                    <button onClick={() => signIn("google")} className="px-5 py-2.5 bg-accent text-white rounded font-semibold transition hover:bg-accent/90">Sign In Securely</button>
                   </div>
                 ) : !Array.isArray(watchlist) || watchlist.length === 0 ? (
                   <div className="p-8 mt-12 text-center bg-surface border border-border-subtle rounded-xl glass-card max-w-lg mx-auto">

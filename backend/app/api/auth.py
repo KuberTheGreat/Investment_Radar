@@ -10,6 +10,9 @@ from pydantic import BaseModel
 from app.core.database import get_db
 from app.core.config import settings
 from app.models.auth import User
+from google.oauth2 import id_token
+from google.auth.transport import requests as google_requests
+import uuid
 
 router = APIRouter()
 
@@ -95,6 +98,38 @@ async def login(user: UserCreate, db: AsyncSession = Depends(get_db)):
             headers={"WWW-Authenticate": "Bearer"},
         )
         
+    access_token = create_access_token(
+        data={"sub": db_user.email, "user_id": str(db_user.id)},
+        expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    )
+    return {"access_token": access_token, "token_type": "bearer", "user_id": str(db_user.id)}
+
+class GoogleToken(BaseModel):
+    token: str
+
+@router.post("/google", response_model=Token)
+async def google_auth(token_data: GoogleToken, db: AsyncSession = Depends(get_db)):
+    try:
+        # Request Google's public keys to verify the RSA signature
+        idinfo = id_token.verify_oauth2_token(token_data.token, google_requests.Request())
+        email = idinfo.get("email")
+        if not email:
+            raise ValueError("No email found in Google token")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=f"Invalid Google token: {str(e)}")
+
+    # Check if user exists
+    result = await db.execute(select(User).where(User.email == email))
+    db_user = result.scalars().first()
+
+    if not db_user:
+        # Auto-register Google users natively with a bypassed password matrix
+        dummy_hashed_password = get_password_hash(str(uuid.uuid4()) + "google_oauth_bypassed")
+        db_user = User(email=email, password_hash=dummy_hashed_password)
+        db.add(db_user)
+        await db.commit()
+        await db.refresh(db_user)
+
     access_token = create_access_token(
         data={"sub": db_user.email, "user_id": str(db_user.id)},
         expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
