@@ -12,6 +12,7 @@ import {
   SignalFilters,
   triggerOnDemandAnalysis,
 } from "./api";
+import { useAuth } from "./authContext";
 import { logger } from "./utils";
 
 // ─── Query key factory ────────────────────────────────────────────────────────
@@ -270,7 +271,7 @@ export function usePaginatedSignals(
 
   const hasNextPage =
     query.data
-      ? query.data.data.length === pageSize
+      ? query.data.total > (page + 1) * pageSize
       : false;
 
   const hasPrevPage = page > 0;
