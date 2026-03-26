@@ -75,7 +75,6 @@ export default function DashboardPage() {
                 filters={{ min_win_rate: 50 }}
                 pageSize={6}
                 layout="grid"
-                deduplicateBySymbol
               />
             </ErrorBoundary>
           </div>

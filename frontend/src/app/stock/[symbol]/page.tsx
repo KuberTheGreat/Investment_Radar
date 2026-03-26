@@ -41,17 +41,35 @@ export default function StockPage({ params }: StockPageProps) {
   return (
     <>
       <TopBar
-        title={upperSymbol}
-        subtitle={`Current Price: ${latestPrice} • Interactive candlestick chart`}
+        title={`${upperSymbol} Analysis`}
       />
       <PageWrapper>
         <Link
           href="/"
-          className="inline-flex items-center gap-1 text-xs text-muted hover:text-foreground transition-colors mb-6"
+          className="inline-flex items-center gap-1 text-xs text-muted hover:text-foreground transition-colors mb-4"
         >
           <ChevronLeft className="w-3.5 h-3.5" />
           Back to Dashboard
         </Link>
+        
+        {/* Prominent Stock Price Header */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between mb-6 p-6 rounded-2xl bg-surface border border-border-subtle shadow-sm relative overflow-hidden glass-card">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-accent/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3"></div>
+          <div className="relative z-10">
+            <h1 className="text-4xl font-extrabold text-foreground mb-1 tracking-tight">{upperSymbol}</h1>
+            <p className="text-sm font-medium text-muted">Advanced Market Intelligence & Interactive Charting</p>
+          </div>
+          <div className="mt-6 md:mt-0 text-left md:text-right relative z-10">
+            <div className="text-4xl font-extrabold gradient-text tracking-tight">{latestPrice}</div>
+            {dayData && dayData.length >= 2 && (
+              <div className={`text-sm font-bold flex items-center md:justify-end gap-1 mt-1.5 ${dayData[dayData.length-1].close >= dayData[dayData.length-2].close ? "text-bullish" : "text-bearish"}`}>
+                <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
+                {dayData[dayData.length-1].close >= dayData[dayData.length-2].close ? "+" : ""}
+                {((dayData[dayData.length-1].close - dayData[dayData.length-2].close) / dayData[dayData.length-2].close * 100).toFixed(2)}% Current Session
+              </div>
+            )}
+          </div>
+        </div>
 
         <div className="space-y-6">
           {/* Chart */}
