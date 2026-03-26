@@ -72,7 +72,7 @@ export default function DashboardPage() {
             </div>
             <ErrorBoundary context="SignalList">
               <SignalList
-                filters={{ high_confluence_only: true }}
+                filters={{ min_win_rate: 50 }}
                 pageSize={6}
                 layout="grid"
                 deduplicateBySymbol

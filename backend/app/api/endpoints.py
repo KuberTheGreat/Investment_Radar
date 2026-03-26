@@ -178,8 +178,9 @@ async def get_stock_ohlcv(
     db: AsyncSession = Depends(get_db)
 ):
     """OHLCV formatted for lightweight-charts. Supports timeframe + date range filters."""
+    clean_sym = symbol.upper().replace(".NS", "").replace(".BO", "")
     stmt = select(OHLCCandle).where(
-        OHLCCandle.symbol == symbol.upper(),
+        OHLCCandle.symbol == clean_sym,
         OHLCCandle.timeframe == timeframe
     )
     if from_ts:
@@ -211,7 +212,8 @@ async def get_stock_patterns(
     to_ts: Optional[str] = Query(None, alias="to"),
     db: AsyncSession = Depends(get_db)
 ):
-    stmt = select(DetectedPattern).where(DetectedPattern.symbol == symbol.upper())
+    clean_sym = symbol.upper().replace(".NS", "").replace(".BO", "")
+    stmt = select(DetectedPattern).where(DetectedPattern.symbol == clean_sym)
     if from_ts:
         stmt = stmt.where(DetectedPattern.detected_at >= datetime.fromisoformat(from_ts))
     if to_ts:
@@ -239,7 +241,8 @@ async def get_stock_events(
     to_ts: Optional[str] = Query(None, alias="to"),
     db: AsyncSession = Depends(get_db)
 ):
-    stmt = select(CorporateEvent).where(CorporateEvent.symbol == symbol.upper())
+    clean_sym = symbol.upper().replace(".NS", "").replace(".BO", "")
+    stmt = select(CorporateEvent).where(CorporateEvent.symbol == clean_sym)
     if from_ts:
         stmt = stmt.where(CorporateEvent.event_date >= datetime.fromisoformat(from_ts).date())
     if to_ts:

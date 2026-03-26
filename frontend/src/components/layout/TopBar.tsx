@@ -22,7 +22,8 @@ export function TopBar({ title, subtitle }: TopBarProps) {
       try {
         const res = await searchStock(searchQuery.trim());
         if (res && res.symbol) {
-          router.push(`/stock/${res.symbol.toUpperCase()}`);
+          const cleanSymbol = res.symbol.toUpperCase().replace(/\.(NS|BO)$/, "");
+          router.push(`/stock/${cleanSymbol}`);
         } else {
           router.push(`/stock/${searchQuery.trim().toUpperCase()}`);
         }
