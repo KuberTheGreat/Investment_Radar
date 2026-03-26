@@ -11,6 +11,7 @@ import {
   createSSEConnection,
   SignalFilters,
   triggerOnDemandAnalysis,
+  fetchWatchlist,
 } from "./api";
 import { useAuth } from "./authContext";
 import { logger } from "./utils";
@@ -83,9 +84,8 @@ export function useEvents(symbol: string) {
 
 export function useWatchlist() {
   const { token } = useAuth();
-  return useQuery({
+  return useQuery<string[]>({
     queryKey: ["watchlist"],
-    // @ts-ignore
     queryFn: fetchWatchlist,
     enabled: !!token, // Only fetch if authenticated natively
     staleTime: 10_000,

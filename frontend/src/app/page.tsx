@@ -77,7 +77,7 @@ export default function DashboardPage() {
                   className={`px-4 py-1.5 text-xs font-semibold rounded-md transition-all ${activeTab === "watchlist" ? "bg-surface shadow-sm text-foreground flex items-center gap-1.5" : "text-muted hover:text-foreground flex items-center gap-1.5"}`}
                 >
                   My Watchlist
-                  {token && watchlist && <span className="text-[10px] bg-accent/20 text-accent px-1.5 rounded">{watchlist.length}</span>}
+                  {token && Array.isArray(watchlist) && <span className="text-[10px] bg-accent/20 text-accent px-1.5 rounded">{watchlist.length}</span>}
                 </button>
               </div>
               <Link
@@ -103,14 +103,14 @@ export default function DashboardPage() {
                     <p className="text-sm text-muted mb-4 max-w-sm">Sign in to track your favorite Indian equities and receive personalized background AI processing pipelines.</p>
                     <button onClick={() => setShowAuthModal?.(true)} className="px-5 py-2.5 bg-accent text-white rounded font-semibold transition hover:bg-accent/90">Sign In / Register</button>
                   </div>
-                ) : !watchlist || watchlist.length === 0 ? (
+                ) : !Array.isArray(watchlist) || watchlist.length === 0 ? (
                   <div className="p-8 mt-12 text-center bg-surface border border-border-subtle rounded-xl glass-card max-w-lg mx-auto">
                     <p className="text-sm font-semibold text-foreground mb-1">Your Watchlist is empty.</p>
                     <p className="text-xs text-muted mt-2 max-w-sm mx-auto">Search for any NSE stock, navigate to its analysis page, and click the Star icon to configure background tracking.</p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4 animate-in fade-in zoom-in-95 duration-300">
-                    {watchlist.map((symbol) => (
+                    {watchlist.map((symbol: string) => (
                       <Link
                         key={symbol}
                         href={`/stock/${symbol.replace(".NS", "")}`}
