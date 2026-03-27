@@ -404,6 +404,115 @@ class BrokerService:
             logger.error(f"broker: ltpData() failed for {symbol}: {exc}")
         return None
 
+    # ── Phase 2b: Historical Candle Data ─────────────────────────────────────
+
+    # Map our internal timeframe strings → Angel One interval constants
+    _INTERVAL_MAP = {
+        "1m":  "ONE_MINUTE",
+        "5m":  "FIVE_MINUTE",
+        "15m": "FIFTEEN_MINUTE",
+        "30m": "THIRTY_MINUTE",
+        "1h":  "ONE_HOUR",
+        "1d":  "ONE_DAY",
+    }
+
+    def resolve_token_for_symbol(self, symbol: str, exchange: str = "NSE") -> str:
+        """
+        Public helper — resolves NSE symbol name to Angel One instrument token.
+        Uses the pre-seeded token cache from market_websocket and falls back
+        to searchScrip API.
+        """
+        # Check websocket cache first (avoids an API round-trip)
+        from app.services.market_websocket import _SYMBOL_TOKEN_CACHE
+        sym = symbol.upper().replace(".NS", "").replace("-EQ", "")
+        if sym in _SYMBOL_TOKEN_CACHE:
+            return _SYMBOL_TOKEN_CACHE[sym]
+        return self._resolve_symbol_token(sym + "-EQ", exchange)
+
+    def get_historical_candles(
+        self,
+        symbol: str,
+        interval: str,
+        from_date: datetime,
+        to_date: datetime,
+        exchange: str = "NSE",
+    ) -> list[dict]:
+        """
+        Fetch historical OHLCV candles from Angel One's getCandleData API.
+
+        Args:
+            symbol:    NSE symbol without suffix, e.g. "RELIANCE"
+            interval:  "1m" | "5m" | "15m" | "30m" | "1h" | "1d"
+            from_date: Start datetime (IST)
+            to_date:   End datetime (IST)
+            exchange:  "NSE" | "BSE"
+
+        Returns:
+            List of dicts with keys: timestamp, open, high, low, close, volume
+            Returns [] on failure (caller should fallback to yfinance).
+        """
+        if not self._is_authenticated or not self._smart_api:
+            logger.debug("broker: Not authenticated — skipping getCandleData.")
+            return []
+
+        ao_interval = self._INTERVAL_MAP.get(interval)
+        if not ao_interval:
+            logger.warning(f"broker: Unknown interval '{interval}' — falling back to yfinance.")
+            return []
+
+        token = self.resolve_token_for_symbol(symbol, exchange)
+        if not token:
+            logger.warning(f"broker: Could not resolve token for {symbol} — falling back to yfinance.")
+            return []
+
+        fmt = "%Y-%m-%d %H:%M"
+        params = {
+            "exchange":    exchange,
+            "symboltoken": token,
+            "interval":    ao_interval,
+            "fromdate":    from_date.strftime(fmt),
+            "todate":      to_date.strftime(fmt),
+        }
+
+        try:
+            logger.info(f"broker: getCandleData {symbol} {interval} {params['fromdate']} → {params['todate']}")
+            response = self._smart_api.getCandleData(params)
+
+            if not response.get("status") or not response.get("data"):
+                logger.warning(f"broker: getCandleData returned no data for {symbol}: {response.get('message')}")
+                return []
+
+            candles = []
+            for row in response["data"]:
+                # Angel One format: [timestamp_str, open, high, low, close, volume]
+                if len(row) < 6:
+                    continue
+                try:
+                    ts_str, o, h, l, c, v = row[0], row[1], row[2], row[3], row[4], row[5]
+                    # Parse Angel One ISO timestamp
+                    ts = datetime.fromisoformat(ts_str)
+                    # Validate OHLC integrity
+                    if not (h >= o and h >= c and h >= l and l <= o and l <= c):
+                        continue
+                    candles.append({
+                        "timestamp": ts,
+                        "open":  float(o),
+                        "high":  float(h),
+                        "low":   float(l),
+                        "close": float(c),
+                        "volume": int(v),
+                    })
+                except Exception:
+                    continue
+
+            logger.info(f"broker: getCandleData returned {len(candles)} candles for {symbol} {interval}")
+            return candles
+
+        except Exception as exc:
+            logger.error(f"broker: getCandleData exception for {symbol}: {exc}")
+            return []
+
 
 # ── Global singleton ──────────────────────────────────────────────────────────
 broker_service = BrokerService()
+

@@ -106,12 +106,24 @@ async def detect_patterns_for_symbol(symbol: str, timeframe: str = "15m", limit:
             print(f"[{symbol}] Detected {len(detected)} patterns on {timeframe}")
 
 async def run_pattern_detector():
-    """ Runs detection loop across target symbols natively """
-    from app.services.market_data import NIFTY_TOP_10
-    print(f"Running Pattern Detection for {len(NIFTY_TOP_10)} symbols...")
+    """Runs detection loop across all user watchlist symbols."""
+    from sqlalchemy import select
+    from app.models.auth import Watchlist
+    from app.core.database import AsyncSessionLocal
     import asyncio
+
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(select(Watchlist.symbol).distinct())
+        symbols = result.scalars().all()
+
+    if not symbols:
+        print("Pattern Detector: No watchlist symbols — skipping.")
+        return
+
+    print(f"Running Pattern Detection for {len(symbols)} symbols...")
     tasks = []
-    for s in NIFTY_TOP_10:
+    for s in symbols:
         tasks.append(detect_patterns_for_symbol(s.replace(".NS", ""), timeframe="15m"))
         tasks.append(detect_patterns_for_symbol(s.replace(".NS", ""), timeframe="1d"))
     await asyncio.gather(*tasks)
+
