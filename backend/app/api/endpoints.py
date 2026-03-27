@@ -13,8 +13,27 @@ from app.models.market_data import OHLCCandle
 from app.models.patterns import DetectedPattern
 from app.models.events import CorporateEvent
 from app.services.llm_explainer import llm_service
+import redis.asyncio as aioredis
+from app.core.config import settings
 
 router = APIRouter()
+
+redis_client = aioredis.from_url(settings.REDIS_URL, decode_responses=True)
+
+async def _get_cache(key: str):
+    try:
+        val = await redis_client.get(key)
+        if val:
+            return json.loads(val)
+    except Exception:
+        pass
+    return None
+
+async def _set_cache(key: str, data: dict | list, ttl: int = 60):
+    try:
+        await redis_client.setex(key, ttl, json.dumps(data))
+    except Exception:
+        pass
 
 # ── Signals Feed ────────────────────────────────────────────────────────────
 
@@ -32,6 +51,12 @@ async def get_signals(
     deduplicate_symbol: bool = False,
     db: AsyncSession = Depends(get_db)
 ):
+    # Setup global caching layer footprint
+    cache_key = f"signals:{skip}:{limit}:{symbol}:{signal_type}:{direction}:{min_win_rate}:{min_confluence}:{high_confluence_only}:{archived}:{deduplicate_symbol}"
+    cached = await _get_cache(cache_key)
+    if cached:
+        return cached
+
     stmt = select(Signal)
 
     if not archived:
@@ -67,12 +92,14 @@ async def get_signals(
 
     paged_signals = unique_signals[skip : skip + limit]
 
-    return {
+    result_payload = {
         "data": [_signal_to_dict(s) for s in paged_signals],
         "skip": skip,
         "limit": limit,
         "total": len(unique_signals)
     }
+    await _set_cache(cache_key, result_payload, ttl=30)
+    return result_payload
 
 
 @router.get("/signals/{signal_id}")
@@ -225,6 +252,11 @@ async def get_stock_ohlcv(
 ):
     """OHLCV formatted for lightweight-charts. Supports timeframe + date range filters."""
     clean_sym = symbol.upper().replace(".NS", "").replace(".BO", "")
+    cache_key = f"ohlcv:{clean_sym}:{timeframe}:{from_ts}:{to_ts}"
+    cached = await _get_cache(cache_key)
+    if cached:
+        return cached
+
     stmt = select(OHLCCandle).where(
         OHLCCandle.symbol == clean_sym,
         OHLCCandle.timeframe == timeframe
@@ -238,7 +270,7 @@ async def get_stock_ohlcv(
     result = await db.execute(stmt)
     candles = result.scalars().all()
 
-    return [
+    payload = [
         {
             "time": int(c.timestamp.timestamp()),
             "open": float(c.open),
@@ -249,6 +281,9 @@ async def get_stock_ohlcv(
         }
         for c in candles
     ]
+    if payload:
+        await _set_cache(cache_key, payload, ttl=60)
+    return payload
 
 
 @router.get("/stock/{symbol}/patterns")

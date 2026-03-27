@@ -44,9 +44,17 @@ export function SignalDetailPanel({ signal }: SignalDetailPanelProps) {
                   {signal.symbol.slice(0, 2)}
                 </div>
                 <div>
-                  <h1 className="text-xl font-bold text-foreground">
-                    {signal.symbol}
-                  </h1>
+                  <div className="flex items-center gap-3">
+                    <h1 className="text-xl font-bold text-foreground">
+                      {signal.symbol}
+                    </h1>
+                    <Link
+                      href={`/stock/${signal.symbol}`}
+                      className="px-2.5 py-1 rounded-md bg-accent/10 hover:bg-accent/20 transition-colors text-accent text-[11px] font-medium"
+                    >
+                      View Chart
+                    </Link>
+                  </div>
                   <p className="text-xs text-muted">
                     {formatTimeAgo(signal.created_at)}
                   </p>

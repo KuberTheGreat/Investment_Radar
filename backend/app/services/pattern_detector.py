@@ -29,8 +29,8 @@ async def detect_patterns_for_symbol(symbol: str, timeframe: str = "15m", limit:
         result = await session.execute(stmt)
         candles = result.scalars().all()
         
-        if len(candles) < limit:
-            # Need sufficient history for TA-Lib
+        if len(candles) < 10:
+            # Need sufficient minimum history for TA-Lib baseline functions
             return
             
         # Sort ascending for TA-Lib
@@ -55,8 +55,7 @@ async def detect_patterns_for_symbol(symbol: str, timeframe: str = "15m", limit:
         current_trend_up = close_data[-1] > sma_20[-1] if not np.isnan(sma_20[-1]) else True
         
         detected = []
-        # The latest completed candle is at index -1
-        latest_timestamp = df.iloc[-1]['timestamp']
+        timestamps = df['timestamp'].values
         
         for p in PATTERNS_CONFIG:
             func_name = p['function']
@@ -64,24 +63,32 @@ async def detect_patterns_for_symbol(symbol: str, timeframe: str = "15m", limit:
             
             # Run the CDL function
             result_array = pattern_func(open_data, high_data, low_data, close_data)
-            last_val = result_array[-1]
             
-            if last_val != 0:
-                direction = "bullish" if last_val > 0 else "bearish"
+            # Find all indices where a pattern was detected
+            non_zero_indices = np.nonzero(result_array)[0]
+            
+            for idx in non_zero_indices:
+                val = result_array[idx]
+                direction = "bullish" if val > 0 else "bearish"
                 
                 # Trend alignment check (FR-PD-05) for daily timeframe
                 if timeframe == "1d":
-                    if direction == "bullish" and not current_trend_up:
+                    # Use SMA at the time of detection if possible, or fallback to current
+                    idx_trend_up = close_data[idx] > sma_20[idx] if not np.isnan(sma_20[idx]) else current_trend_up
+                    if direction == "bullish" and not idx_trend_up:
                         continue
-                    if direction == "bearish" and current_trend_up:
+                    if direction == "bearish" and idx_trend_up:
                         continue
                         
+                # Extract proper historical timestamp
+                pattern_time = pd.Timestamp(timestamps[idx]).to_pydatetime()
+                
                 detected.append(dict(
                     symbol=symbol,
                     pattern_name=func_name,
                     signal_direction=direction,
                     timeframe=timeframe,
-                    detected_at=latest_timestamp,
+                    detected_at=pattern_time,
                     created_at=pd.Timestamp.utcnow() # Can also be db server default
                 ))
         

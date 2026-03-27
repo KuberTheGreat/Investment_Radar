@@ -18,6 +18,8 @@ from app.services.pattern_detector import run_pattern_detector
 from app.services.confluence_scorer import run_confluence_scorer
 from app.services.opportunity_radar import run_opportunity_radar
 from app.services.corporate_events import run_corporate_events_pipeline
+from app.services.broker_service import broker_service  # Angel One session singleton
+from app.models.broker import BrokerSession  # Ensure Alembic autogenerates the migration
 
 scheduler = AsyncIOScheduler()
 
@@ -32,6 +34,8 @@ async def lifespan(app: FastAPI):
     # Signal expiry: runs every day at midnight IST (18:30 UTC)
     from app.api.endpoints import expire_old_signals
     scheduler.add_job(expire_old_signals, 'cron', hour=18, minute=30, id='signal_expiry_job')
+    # Angel One daily token refresh: 06:00 IST = 00:30 UTC, before NSE open
+    scheduler.add_job(broker_service.refresh_session, 'cron', hour=0, minute=30, id='broker_refresh_job')
     scheduler.start()
     
     # Run once immediately on startup but in the background so the server can accept requests
@@ -84,3 +88,6 @@ app.include_router(auth_router, prefix="/api/auth", tags=["auth"])
 
 from app.api.watchlist import router as watchlist_router
 app.include_router(watchlist_router, prefix="/api/watchlist", tags=["watchlist"])
+
+from app.api.broker import router as broker_router
+app.include_router(broker_router, prefix="/api/broker", tags=["broker"])

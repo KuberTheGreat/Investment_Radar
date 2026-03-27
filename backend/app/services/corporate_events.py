@@ -22,13 +22,23 @@ async def fetch_and_store_yahoo_news(symbol_ns: str):
             
         async with AsyncSessionLocal() as session:
             for item in news_items:
-                pub_time = item.get("providerPublishTime")
+                content = item.get("content", item)
+                pub_time = content.get("pubDate") or item.get("providerPublishTime")
                 if not pub_time: continue
                 
-                event_date = datetime.fromtimestamp(pub_time).date()
-                title = item.get("title", "News")
-                publisher = item.get("publisher", "Yahoo Finance")
-                link = item.get("link", "")
+                if isinstance(pub_time, (int, float)):
+                    event_date = datetime.fromtimestamp(pub_time).date()
+                else:
+                    import pandas as pd
+                    event_date = pd.to_datetime(pub_time).date()
+                    
+                title = content.get("title", "News")
+                
+                provider = content.get("provider", {})
+                publisher = provider.get("displayName", content.get("publisher", "Yahoo Finance"))
+                
+                url_dict = content.get("clickThroughUrl", {})
+                link = url_dict.get("url", content.get("link", ""))
                 
                 # Flag structural anomalies natively if title contains high-impact financial keywords
                 is_anomaly = any(x in title.lower() for x in ["dividend", "earnings", "merger", "acquisition", "split", "buyback"])

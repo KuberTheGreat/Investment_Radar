@@ -30,9 +30,18 @@ async def process_new_patterns():
         result = await session.execute(stmt)
         all_patterns = result.scalars().all()
 
-        new_patterns = [p for p in all_patterns if p.id not in existing_pattern_ids]
-        logger.info(f"confluence_scorer: {len(new_patterns)} new patterns to score (out of {len(all_patterns)} total).")
-
+        filtered_patterns = [p for p in all_patterns if p.id not in existing_pattern_ids]
+        
+        # Deduplicate multiple timeframe occurrences to max 1 per calendar day
+        unique_patterns_map = {}
+        for p in filtered_patterns:
+            key = (p.symbol, p.pattern_name, p.timeframe, p.detected_at.date())
+            if key not in unique_patterns_map or p.detected_at > unique_patterns_map[key].detected_at:
+                unique_patterns_map[key] = p
+                
+        new_patterns = list(unique_patterns_map.values())
+        logger.info(f"confluence_scorer: {len(new_patterns)} deduplicated new patterns to score (out of {len(all_patterns)} total).")
+        
         if not new_patterns:
             logger.info("confluence_scorer: No new patterns to score. Skipping.")
             return
@@ -91,7 +100,7 @@ async def process_new_patterns():
                 signal_rank=signal_rank,
                 low_confidence=lc,
                 is_active=True,
-                created_at=pd.Timestamp.utcnow()
+                created_at=pd.Timestamp.now('UTC')
             )
 
             # Use ON CONFLICT DO NOTHING on pattern_id to prevent duplicates
@@ -115,15 +124,20 @@ async def process_new_patterns():
 
     # Pre-generate one_liner + paragraph in background after commit (outside session)
     if new_signal_ids:
-        logger.info(f"confluence_scorer: Pre-generating summaries for {len(new_signal_ids)} signals (sequentially)...")
-        from app.services.llm_explainer import llm_service
-        async with AsyncSessionLocal() as gen_session:
-            for sid in new_signal_ids:
-                try:
-                    await llm_service.generate_summary(gen_session, sid)
-                    await asyncio.sleep(2)  # Polite delay between Groq calls
-                except Exception as e:
-                    logger.error(f"confluence_scorer: Summary generation failed for {sid} — {e}")
+        logger.info(f"confluence_scorer: Pre-generating summaries for {len(new_signal_ids)} signals in background daemon...")
+        
+        async def _generate_summaries_bg(sids):
+            from app.services.llm_explainer import llm_service
+            async with AsyncSessionLocal() as gen_session:
+                for sid in sids:
+                    try:
+                        await llm_service.generate_summary(gen_session, sid)
+                        await asyncio.sleep(2)  # Polite delay between Groq calls
+                    except Exception as e:
+                        logger.error(f"confluence_scorer: Summary generation failed for {sid} — {e}")
+        
+        # Fire and forget onto the asyncio event loop unconditionally decoupling the HTTP return
+        asyncio.create_task(_generate_summaries_bg(new_signal_ids), name=f"llm_gen_{len(new_signal_ids)}")
 
 
 async def run_confluence_scorer():

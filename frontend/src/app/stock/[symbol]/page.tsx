@@ -216,6 +216,9 @@ function PatternsPanel({ symbol }: { symbol: string }) {
                 {p.signal_direction}
               </span>
               <span className="text-muted-2">{p.timeframe}</span>
+              <span className="text-muted-2 min-w-[90px] text-right">
+                {new Date(p.detected_at).toLocaleDateString(undefined, {month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'})}
+              </span>
             </div>
           ))}
         </div>

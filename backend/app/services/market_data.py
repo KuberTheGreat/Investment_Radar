@@ -34,11 +34,18 @@ async def fetch_and_store_klines(symbol: str, period: str = "1d", interval: str 
         
         async with AsyncSessionLocal() as session:
             for _, row in df.iterrows():
-                # Convert timestamp to IST
-                candle_time = row[time_col].astimezone(IST) if row[time_col].tzinfo else IST.localize(row[time_col])
+                # Convert timestamp to native python datetime for asyncpg
+                pt = row[time_col]
+                candle_time = pt.to_pydatetime().astimezone(IST) if pt.tzinfo else IST.localize(pt.to_pydatetime())
+                
+                open_val = float(row['Open'])
+                high_val = float(row['High'])
+                low_val = float(row['Low'])
+                close_val = float(row['Close'])
+                vol_val = int(row['Volume'])
                 
                 # Validation: High >= Open, Close, Low must hold
-                is_valid = row['High'] >= row['Open'] and row['High'] >= row['Close'] and row['High'] >= row['Low']
+                is_valid = high_val >= open_val and high_val >= close_val and high_val >= low_val
                 if not is_valid:
                     continue
                 
@@ -46,11 +53,11 @@ async def fetch_and_store_klines(symbol: str, period: str = "1d", interval: str 
                     symbol=symbol.replace(".NS", ""),
                     timestamp=candle_time,
                     timeframe=interval,
-                    open=row['Open'],
-                    high=row['High'],
-                    low=row['Low'],
-                    close=row['Close'],
-                    volume=int(row['Volume']),
+                    open=open_val,
+                    high=high_val,
+                    low=low_val,
+                    close=close_val,
+                    volume=vol_val,
                     is_stale=False # Normalised state handled later if needed
                 )
                 
@@ -81,8 +88,8 @@ async def run_market_data_pipeline():
         result = await session.execute(select(Watchlist.symbol).distinct())
         db_symbols = result.scalars().all()
         
-    # Inject default minimum sandbox anchor to ensure radar operates even when nobody is logged in
-    active_universe = set([sym + ".NS" for sym in db_symbols] + ["RELIANCE.NS"])
+    # Radar loop operates transparently only on native user configurations
+    active_universe = set([sym + ".NS" for sym in db_symbols])
     
     tasks_15m = [fetch_and_store_klines(symbol, period="5d", interval="15m") for symbol in active_universe]
     tasks_1d = [fetch_and_store_klines(symbol, period="2mo", interval="1d") for symbol in active_universe]

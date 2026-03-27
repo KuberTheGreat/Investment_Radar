@@ -8,6 +8,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Zap,
+  Star,
+  User,
 } from "lucide-react";
 import { cn } from "@/components/ui/cn";
 import { usePipelineHealth } from "@/lib/hooks";
@@ -15,7 +17,9 @@ import { useState } from "react";
 
 const NAV_ITEMS = [
   { href: "/", icon: LayoutDashboard, label: "Dashboard" },
+  { href: "/watchlist", icon: Star, label: "My Watchlist" },
   { href: "/signals", icon: Radio, label: "Signal Radar" },
+  { href: "/profile", icon: User, label: "My Profile" },
 ];
 
 export function Sidebar() {

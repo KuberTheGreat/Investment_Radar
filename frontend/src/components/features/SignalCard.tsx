@@ -1,7 +1,9 @@
 "use client";
 import Link from "next/link";
-import { ArrowRight, AlertTriangle } from "lucide-react";
-import { Signal } from "@/lib/api";
+import { ArrowRight, AlertTriangle, Star } from "lucide-react";
+import { Signal, addToWatchlist, removeFromWatchlist } from "@/lib/api";
+import { useWatchlist } from "@/lib/hooks";
+import { useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { ConfluenceScore } from "./ConfluenceScore";
@@ -18,7 +20,27 @@ interface SignalCardProps {
 }
 
 export function SignalCard({ signal, compact = false }: SignalCardProps) {
+  const queryClient = useQueryClient();
+  const { data: watchlist } = useWatchlist();
+  
   const isBullish = signal.signal_type === "opportunity";
+  const upperSymbol = signal.symbol.toUpperCase();
+  const inWatchlist = Array.isArray(watchlist) && watchlist.includes(upperSymbol);
+
+  const toggleWatchlist = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      if (inWatchlist) {
+        await removeFromWatchlist(upperSymbol);
+      } else {
+        await addToWatchlist(upperSymbol);
+      }
+      queryClient.invalidateQueries({ queryKey: ["watchlist"] });
+    } catch (err) {
+      console.error("Watchlist generic mutation failed", err);
+    }
+  };
 
   return (
     <Link href={`/signals/${signal.id}`} className="block">
@@ -61,6 +83,18 @@ export function SignalCard({ signal, compact = false }: SignalCardProps) {
             <span className={cn("text-xs font-medium px-2 py-0.5 rounded-full border", getSignalTypeBg(signal.signal_type))}>
               {signal.signal_type === "opportunity" ? "Opportunity" : "Pattern"}
             </span>
+            <button
+              onClick={toggleWatchlist}
+              className="p-1.5 sm:p-2 bg-surface-2 hover:bg-surface-3 transition-colors border border-border-subtle rounded-lg ml-1"
+              title={inWatchlist ? "Remove from Watchlist" : "Add to Watchlist"}
+            >
+              <Star
+                className={cn(
+                  "w-4 h-4 transition-colors duration-300",
+                  inWatchlist ? "fill-accent text-accent" : "text-muted hover:text-foreground"
+                )}
+              />
+            </button>
           </div>
         </div>
 
