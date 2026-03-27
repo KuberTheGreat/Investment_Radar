@@ -171,6 +171,7 @@ async def analyze_stock_on_demand(
         from app.services.confluence_scorer import process_new_patterns
         from app.services.opportunity_radar import detect_opportunities
         from app.services.corporate_events import fetch_and_store_yahoo_news
+        from app.services.backtester import run_backtesting_engine
         logger.info(f"BG pipeline starting for {base_symbol}")
         try:
             # 1. Fetch all timeframes in parallel — much faster
@@ -178,6 +179,7 @@ async def analyze_stock_on_demand(
                 fetch_and_store_klines(base_symbol, interval="1m"),
                 fetch_and_store_klines(base_symbol, interval="5m"),
                 fetch_and_store_klines(base_symbol, interval="15m"),
+                fetch_and_store_klines(base_symbol, interval="1h"),
                 fetch_and_store_klines(base_symbol, interval="1d"),
                 return_exceptions=True,
             )
@@ -187,9 +189,12 @@ async def analyze_stock_on_demand(
             await detect_patterns_for_symbol(base_symbol, timeframe="1d")
             await detect_opportunities()
             await process_new_patterns()
+            # 3. Backtest — computes win rates for this symbol
+            await run_backtesting_engine(symbol=base_symbol)
             logger.info(f"BG pipeline complete for {base_symbol}")
         except Exception as e:
             logger.error(f"BG pipeline error for {base_symbol}: {e}", exc_info=True)
+
 
     background_tasks.add_task(_run_pipeline)
     return {"status": "processing", "symbol": base_symbol}

@@ -129,19 +129,18 @@ export default function StockPage({ params }: StockPageProps) {
         </div>
 
         <div className="space-y-6">
-          {/* Chart */}
+          {/* Chart — always rendered; spinner overlays during background analysis */}
           <ErrorBoundary context="CandlestickChart">
-            {isAnalyzing ? (
-              <div className="flex flex-col items-center justify-center p-12 border border-border-subtle rounded-xl bg-surface/50 h-[400px]">
-                <Loader2 className="w-8 h-8 text-accent animate-spin mb-4" />
-                <h3 className="text-lg font-medium text-foreground mb-2">Analyzing {upperSymbol}...</h3>
-                <p className="text-sm text-muted text-center max-w-md">
-                  We are fetching historical market data, running pattern recognition models, and computing AI confluence scores in real-time. This may take a few seconds.
-                </p>
-              </div>
-            ) : (
+            <div className="relative">
               <CandlestickChart symbol={upperSymbol} />
-            )}
+              {isAnalyzing && (
+                <div className="absolute inset-0 z-10 flex flex-col items-center justify-center rounded-xl bg-surface/80 backdrop-blur-sm">
+                  <Loader2 className="w-7 h-7 text-accent animate-spin mb-3" />
+                  <p className="text-sm font-medium text-foreground">Fetching data for {upperSymbol}...</p>
+                  <p className="text-xs text-muted mt-1">Chart will update automatically</p>
+                </div>
+              )}
+            </div>
           </ErrorBoundary>
 
           {/* Patterns + Events row */}

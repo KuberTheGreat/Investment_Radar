@@ -10,7 +10,7 @@ from datetime import datetime
 from app.core.database import AsyncSessionLocal
 from app.models.market_data import OHLCCandle
 from app.models.patterns import BacktestResult
-from app.services.market_data import TARGET_SYMBOLS
+from app.models.auth import Watchlist
 import json
 import os
 
@@ -125,11 +125,21 @@ async def compute_backtest_for_symbol_pattern(symbol: str, session):
         
     print(f"[{symbol}] Completed Backtest computations.")
 
-async def run_backtesting_engine():
-    """ Runs the backtesting computation for all symbols weekly """
-    print("Running Global Backtesting Engine...")
+async def run_backtesting_engine(symbol: str = None):
+    """Runs backtest for a single symbol (on-demand) or all watchlist symbols (scheduled)."""
+    print(f"Running Backtesting Engine{'for ' + symbol if symbol else ' (all symbols)'}...")
     async with AsyncSessionLocal() as session:
-        for s in TARGET_SYMBOLS:
-            await compute_backtest_for_symbol_pattern(s, session)
+        if symbol:
+            symbols = [symbol.upper().replace(".NS", "")]
+        else:
+            result = await session.execute(select(Watchlist.symbol).distinct())
+            symbols = result.scalars().all()
+
+        for s in symbols:
+            try:
+                await compute_backtest_for_symbol_pattern(s, session)
+            except Exception as e:
+                print(f"Backtesting error for {s}: {e}")
         await session.commit()
     print("Backtesting complete.")
+

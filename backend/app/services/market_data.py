@@ -32,18 +32,18 @@ IST = pytz.timezone("Asia/Kolkata")
 def _date_range_for(interval: str) -> tuple[datetime, datetime]:
     """
     Returns (from_date, to_date) in IST for a given candle interval.
-    Mirrors the yfinance 'period' we previously used.
+    Limits are per Angel One API documentation.
     """
     now = datetime.now(IST)
     ranges = {
-        "1m":  timedelta(days=1),
-        "5m":  timedelta(days=5),
-        "15m": timedelta(days=5),
-        "30m": timedelta(days=30),
-        "1h":  timedelta(days=30),
-        "1d":  timedelta(days=60),  # ~2 months of daily bars
+        "1m":  timedelta(days=29),    # Angel One: max 30 days for 1m
+        "5m":  timedelta(days=45),    # Angel One: max 100 days for 5m
+        "15m": timedelta(days=200),   # Angel One: max 200 days for 15m
+        "30m": timedelta(days=200),   # Angel One: max 200 days for 30m
+        "1h":  timedelta(days=365),   # Angel One: max 2 years for 1h
+        "1d":  timedelta(days=730),   # Angel One: unlimited — use 2 years
     }
-    delta = ranges.get(interval, timedelta(days=5))
+    delta = ranges.get(interval, timedelta(days=30))
     from_date = now - delta
     return from_date, now
 
@@ -124,12 +124,12 @@ async def _fetch_via_angel_one(symbol: str, interval: str) -> list[dict]:
 # ── yfinance fallback fetch ───────────────────────────────────────────────────
 
 _YFINANCE_PERIOD_MAP = {
-    "1m":  "1d",
-    "5m":  "5d",
-    "15m": "5d",
-    "30m": "1mo",
-    "1h":  "1mo",
-    "1d":  "2mo",
+    "1m":  "7d",    # yfinance max for 1m is 7 days
+    "5m":  "60d",   # yfinance max for 5m
+    "15m": "60d",   # yfinance max for 15m
+    "30m": "60d",
+    "1h":  "2y",
+    "1d":  "5y",
 }
 
 def _fetch_via_yfinance(symbol_ns: str, interval: str) -> list[dict]:

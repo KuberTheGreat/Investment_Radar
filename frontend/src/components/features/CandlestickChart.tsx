@@ -10,10 +10,11 @@ import { cn } from "@/components/ui/cn";
 import { logger } from "@/lib/utils";
 
 const TIMEFRAMES = [
-  { value: "1m", label: "1m" },
-  { value: "5m", label: "5m" },
+  { value: "1m",  label: "1m" },
+  { value: "5m",  label: "5m" },
   { value: "15m", label: "15m" },
-  { value: "1d", label: "1D" },
+  { value: "1h",  label: "1H" },
+  { value: "1d",  label: "1D" },
 ];
 
 interface CandlestickChartProps {
