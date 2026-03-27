@@ -106,6 +106,97 @@ export function useOnDemandAnalysis() {
   });
 }
 
+// ─── Broker status hook ───────────────────────────────────────────────────────
+
+export function useBrokerStatus() {
+  return useQuery({
+    queryKey: ["brokerStatus"],
+    queryFn: async () => {
+      const res = await fetch("/api/broker/status");
+      if (!res.ok) return { is_authenticated: false };
+      return res.json();
+    },
+    refetchInterval: 60_000,
+    staleTime: 30_000,
+  });
+}
+
+// ─── Angel One Live Price SSE hook ────────────────────────────────────────────
+
+export interface LiveTick {
+  symbol: string;
+  ltp: number;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+  change_pct: number;
+  timestamp: string;
+}
+
+/**
+ * Subscribes to the Angel One WebSocket live price stream for a symbol.
+ * Opens an SSE connection to /api/broker/stream/{symbol} and returns
+ * the latest tick. Falls back to null when feed is not active.
+ *
+ * @param symbol - NSE symbol (e.g. "RELIANCE", without .NS suffix)
+ * @param enabled - set to false to skip subscription (e.g. when not authenticated)
+ */
+export function useLivePrice(symbol: string, enabled = true) {
+  const [tick, setTick] = useState<LiveTick | null>(null);
+  const [connected, setConnected] = useState(false);
+  const cleanupRef = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    if (!enabled || !symbol) return;
+
+    const sym = symbol.toUpperCase().replace(".NS", "");
+    logger.info("useLivePrice", `Opening SSE stream for ${sym}`);
+
+    // First subscribe the symbol to the Angel One feed
+    fetch("/api/broker/subscribe", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ symbols: [sym] }),
+    }).catch((e) => logger.warn("useLivePrice", "Subscribe call failed:", e));
+
+    // Then open SSE stream
+    const es = new EventSource(`/api/broker/stream/${sym}`);
+
+    es.onopen = () => {
+      setConnected(true);
+      logger.info("useLivePrice", `SSE connected for ${sym}`);
+    };
+
+    es.onmessage = (event) => {
+      try {
+        const data: LiveTick = JSON.parse(event.data);
+        setTick(data);
+      } catch (e) {
+        logger.warn("useLivePrice", "Failed to parse tick:", e);
+      }
+    };
+
+    es.onerror = () => {
+      setConnected(false);
+      logger.warn("useLivePrice", `SSE stream error for ${sym}`);
+    };
+
+    cleanupRef.current = () => {
+      es.close();
+      setConnected(false);
+    };
+
+    return () => {
+      es.close();
+      setConnected(false);
+    };
+  }, [symbol, enabled]);
+
+  return { tick, connected };
+}
+
 // ─── Live Alerts SSE hook ─────────────────────────────────────────────────────
 
 export interface AlertItem {

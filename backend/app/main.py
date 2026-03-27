@@ -19,6 +19,7 @@ from app.services.confluence_scorer import run_confluence_scorer
 from app.services.opportunity_radar import run_opportunity_radar
 from app.services.corporate_events import run_corporate_events_pipeline
 from app.services.broker_service import broker_service  # Angel One session singleton
+from app.services.market_websocket import market_ws       # Angel One Phase 2: live ticks
 from app.models.broker import BrokerSession  # Ensure Alembic autogenerates the migration
 
 scheduler = AsyncIOScheduler()
@@ -52,8 +53,35 @@ async def lifespan(app: FastAPI):
             
     asyncio.create_task(seed_data())
     
+    # Auto-start Angel One WebSocket if a live session exists
+    async def _start_broker_ws():
+        try:
+            from sqlalchemy import select
+            from app.core.database import AsyncSessionLocal
+            from app.models.auth import Watchlist
+            async with AsyncSessionLocal() as db:
+                sess_result = await db.execute(
+                    select(BrokerSession).where(BrokerSession.is_active == True)
+                )
+                broker_sess = sess_result.scalars().first()
+                if not broker_sess:
+                    return
+                
+                # Auto-subscribe all watchlist symbols to live feed
+                wl_result = await db.execute(select(Watchlist.symbol).distinct())
+                symbols = wl_result.scalars().all()
+                
+            market_ws.subscribe(list(symbols))
+            market_ws.start(broker_sess.access_token, broker_sess.feed_token)
+            logger.info(f"broker_ws: Auto-started with {len(symbols)} watchlist symbols.")
+        except Exception as e:
+            logger.warning(f"broker_ws: Auto-start skipped — {e}")
+    
+    asyncio.create_task(_start_broker_ws())
+    
     yield
     # Shutdown
+    market_ws.stop()
     scheduler.shutdown()
 
 app = FastAPI(

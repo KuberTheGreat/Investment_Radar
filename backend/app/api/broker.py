@@ -11,12 +11,16 @@ Provides HTTP interface for:
   GET  /api/broker/ltp/{symbol} : Live LTP for a symbol
   POST /api/broker/order        : Place an equity order
 """
+import asyncio
+import json
 import logging
 from fastapi import APIRouter, HTTPException, Query
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import Optional, List
 
 from app.services.broker_service import broker_service
+from app.services.market_websocket import market_ws
 
 logger = logging.getLogger("investorradar.broker.api")
 router = APIRouter()
@@ -35,6 +39,11 @@ class OrderRequest(BaseModel):
     price: float = Field(0.0, description="Limit price (0 for MARKET orders)")
     stop_loss_price: float = Field(0.0, description="Trigger price for stoploss orders")
     tag: str = Field("InvestmentRadar_AI", description="Audit tag attached to the order")
+
+
+class SubscribeRequest(BaseModel):
+    """Schema for subscribing symbols to live WebSocket feed."""
+    symbols: List[str] = Field(..., description="List of NSE symbols e.g. ['RELIANCE', 'TCS']")
 
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
@@ -63,6 +72,94 @@ async def broker_connect():
 async def broker_status():
     """Returns whether the broker session is currently active and authenticated."""
     return broker_service.get_session_status()
+
+
+@router.get("/ws-status", summary="Live WebSocket feed status")
+async def websocket_status():
+    """Returns current WebSocket connection state and active subscriptions."""
+    return market_ws.get_status()
+
+
+@router.post("/subscribe", summary="Subscribe symbols to live price feed")
+async def subscribe_symbols(request: SubscribeRequest):
+    """
+    Adds the given NSE symbols to the live Angel One WebSocket tick feed.
+    If the WebSocket is not yet connected, starts it first.
+    Symbols are resolved to instrument tokens automatically.
+    """
+    status = broker_service.get_session_status()
+    if not status["is_authenticated"]:
+        raise HTTPException(status_code=401, detail="Broker not authenticated. Call /connect first.")
+
+    if not market_ws._connected:
+        from app.models.broker import BrokerSession
+        from sqlalchemy import select
+        from app.core.database import AsyncSessionLocal
+        async with AsyncSessionLocal() as db:
+            result = await db.execute(
+                select(BrokerSession).where(
+                    BrokerSession.client_code == status["client_code"],
+                    BrokerSession.is_active == True
+                )
+            )
+            session = result.scalars().first()
+        if session:
+            market_ws.start(session.access_token, session.feed_token)
+
+    market_ws.subscribe(request.symbols)
+    return {
+        "status": "subscribed",
+        "symbols": request.symbols,
+        "ws_connected": market_ws._connected,
+    }
+
+
+@router.get("/stream/{symbol}", summary="SSE live price stream for a symbol")
+async def stream_price(symbol: str):
+    """
+    Server-Sent Events endpoint that streams real-time price ticks
+    for the given symbol from Redis pub/sub.
+
+    The frontend subscribes to this endpoint once and receives updates
+    as fast as Angel One publishes them (typically 1-3 ticks/second).
+
+    Falls back to the Redis LTP cache if no fresh tick has arrived yet.
+    """
+    sym = symbol.upper().replace(".NS", "")
+
+    async def event_generator():
+        import redis.asyncio as aioredis
+        r = aioredis.from_url(settings.REDIS_URL, decode_responses=True)
+        pubsub = r.pubsub()
+        channel = f"price:{sym}"
+        await pubsub.subscribe(channel)
+        logger.info(f"broker: SSE client subscribed to {channel}")
+
+        # Send cached LTP immediately so UI renders something before next tick
+        cached = await r.get(f"ltp:{sym}")
+        if cached:
+            yield f"data: {cached}\n\n"
+
+        try:
+            # Stream indefinitely — browser closes when user navigates away
+            async for message in pubsub.listen():
+                if message["type"] == "message":
+                    yield f"data: {message['data']}\n\n"
+        finally:
+            await pubsub.unsubscribe(channel)
+            await r.aclose()
+            logger.info(f"broker: SSE client disconnected from {channel}")
+
+    # Import here to avoid circular at module level
+    from app.core.config import settings
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 @router.post("/refresh", summary="Force session token refresh")
