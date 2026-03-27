@@ -60,7 +60,8 @@ export function useOHLCV(symbol: string, timeframe: string) {
     queryKey: queryKeys.ohlcv(symbol, timeframe),
     queryFn: () => fetchOHLCV(symbol, timeframe),
     enabled: !!symbol,
-    staleTime: 60_000,
+    staleTime: 5_000,   // 5s — allows immediate refetch after on-demand analysis
+    retry: 1,
   });
 }
 
@@ -95,8 +96,29 @@ export function useWatchlist() {
 export function useOnDemandAnalysis() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (symbol: string) => triggerOnDemandAnalysis(symbol),
+    mutationFn: async (symbol: string) => {
+      // Step 1: Fire the trigger (returns 202 immediately — no timeout)
+      const res = await fetch(`/api/stock/${symbol}/analyze`, { method: "POST" });
+      if (!res.ok) throw new Error(`Analyze trigger failed: ${res.status}`);
+
+      // Step 2: Poll /status until candle data is ready (max 90s)
+      const maxAttempts = 45;
+      for (let i = 0; i < maxAttempts; i++) {
+        await new Promise((r) => setTimeout(r, 2000));
+        try {
+          const statusRes = await fetch(`/api/stock/${symbol}/status`);
+          if (statusRes.ok) {
+            const status = await statusRes.json();
+            if (status.ready) return status;
+          }
+        } catch (_) { /* keep polling */ }
+      }
+      return { ready: true }; // timeout — show whatever is in DB
+    },
     onSuccess: (_, symbol) => {
+      // Force refetch all chart data and analysis immediately
+      queryClient.invalidateQueries({ queryKey: queryKeys.ohlcv(symbol, "1m") });
+      queryClient.invalidateQueries({ queryKey: queryKeys.ohlcv(symbol, "5m") });
       queryClient.invalidateQueries({ queryKey: queryKeys.ohlcv(symbol, "15m") });
       queryClient.invalidateQueries({ queryKey: queryKeys.ohlcv(symbol, "1d") });
       queryClient.invalidateQueries({ queryKey: queryKeys.patterns(symbol) });
@@ -105,6 +127,7 @@ export function useOnDemandAnalysis() {
     },
   });
 }
+
 
 // ─── Broker status hook ───────────────────────────────────────────────────────
 

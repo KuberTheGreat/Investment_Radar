@@ -24,8 +24,8 @@ export default function StockPage({ params }: StockPageProps) {
   const { symbol } = use(params);
   const upperSymbol = symbol.toUpperCase();
   
-  const { data: ohlcvData, isLoading: isDataLoading } = useOHLCV(upperSymbol, "15m");
-  const { data: dayData } = useOHLCV(upperSymbol, "1d");
+  const { data: ohlcvData, isLoading: isOhlcvLoading } = useOHLCV(upperSymbol, "15m");
+  const { data: dayData, isLoading: isDayLoading } = useOHLCV(upperSymbol, "1d");
   const { mutate: triggerAnalysis, isPending: isAnalyzing } = useOnDemandAnalysis();
   const hasTriggeredRef = useRef(false);
 
@@ -56,13 +56,30 @@ export default function StockPage({ params }: StockPageProps) {
     }
   };
 
+  // Bug fix: Reset trigger flag on EVERY symbol navigation
   useEffect(() => {
-    const isMissingData = (!isDataLoading && ((ohlcvData && ohlcvData.length === 0) || (dayData && dayData.length === 0)));
-    if (isMissingData && !isAnalyzing && !hasTriggeredRef.current) {
+    hasTriggeredRef.current = false;
+  }, [upperSymbol]);
+
+  // Bug fix: Corrected missing-data detection + force-refetch after analysis
+  useEffect(() => {
+    // Wait until both queries have settled
+    if (isOhlcvLoading || isDayLoading) return;
+    // Trigger if data is undefined OR empty array (first load returns undefined, not [])
+    const ohlcvMissing = !ohlcvData || ohlcvData.length === 0;
+    const dayMissing = !dayData || dayData.length === 0;
+    if ((ohlcvMissing || dayMissing) && !isAnalyzing && !hasTriggeredRef.current) {
       hasTriggeredRef.current = true;
-      triggerAnalysis(upperSymbol);
+      triggerAnalysis(upperSymbol, {
+        onSuccess: () => {
+          // Force immediate refetch — don't wait for staleTime
+          queryClient.invalidateQueries({ queryKey: ["ohlcv", upperSymbol] });
+          queryClient.invalidateQueries({ queryKey: ["patterns", upperSymbol] });
+          queryClient.invalidateQueries({ queryKey: ["events", upperSymbol] });
+        },
+      });
     }
-  }, [isDataLoading, ohlcvData, dayData, upperSymbol, triggerAnalysis, isAnalyzing]);
+  }, [isOhlcvLoading, isDayLoading, ohlcvData, dayData, upperSymbol, triggerAnalysis, isAnalyzing, queryClient]);
 
   const latestPrice = dayData && dayData.length > 0 
     ? `₹${dayData[dayData.length - 1].close.toFixed(2)}`

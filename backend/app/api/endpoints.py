@@ -1,6 +1,6 @@
 import asyncio
 from typing import Optional
-from fastapi import APIRouter, Depends, Query, Path, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, Query, Path, HTTPException
 from sse_starlette.sse import EventSourceResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc, func
@@ -147,50 +147,67 @@ async def get_signal_detail(signal_id: str = Path(...), db: AsyncSession = Depen
     return detail
 
 @router.post("/stock/{symbol}/analyze")
-async def analyze_stock_on_demand(symbol: str = Path(...), db: AsyncSession = Depends(get_db)):
+async def analyze_stock_on_demand(
+    symbol: str = Path(...),
+    background_tasks: BackgroundTasks = None,
+    db: AsyncSession = Depends(get_db),
+):
     """
     On-Demand Pipeline trigger.
-    Fetches missing historical data for a newly searched completely unknown symbol,
-    runs the pattern detector, scores confluence, and prepares it for the UI.
+    Returns 202 IMMEDIATELY and runs the full pipeline in the background.
+    Frontend polls GET /stock/{symbol}/status to know when chart data is ready.
+    This eliminates ECONNRESET / proxy timeout for slow first-time fetches.
     """
-    from app.services.market_data import fetch_and_store_klines
-    from app.services.pattern_detector import detect_patterns_for_symbol
-    from app.services.confluence_scorer import process_new_patterns
-    from app.services.opportunity_radar import detect_opportunities
-    from app.services.corporate_events import fetch_and_store_yahoo_news
     import logging
-    
     logger = logging.getLogger("investorradar.api")
     symbol_ns = symbol.upper()
     if not symbol_ns.endswith(".NS"):
         symbol_ns += ".NS"
     base_symbol = symbol_ns.replace(".NS", "")
-    
-    logger.info(f"On-Demand Analysis started for {symbol_ns}")
-    try:
-        # 1. Fetch market data exhaustively (1m, 5m, 15m and 1d) so all UI tabs populate
-        await fetch_and_store_klines(symbol_ns, period="1d", interval="1m")
-        await fetch_and_store_klines(symbol_ns, period="5d", interval="5m")
-        await fetch_and_store_klines(symbol_ns, period="5d", interval="15m")
-        await fetch_and_store_klines(symbol_ns, period="2mo", interval="1d")
-        
-        # 2. Scrape Real-Time Corporate News
-        await fetch_and_store_yahoo_news(symbol_ns)
-        
-        # 3. Detect patterns
-        await detect_patterns_for_symbol(base_symbol, timeframe="15m")
-        await detect_patterns_for_symbol(base_symbol, timeframe="1d")
-        
-        # 4. Compile Event Anomalies into Opportunity Signals
-        await detect_opportunities()
-        
-        # 5. Score final confluences
-        await process_new_patterns()
-        
-        return {"status": "success", "message": f"Successfully ran analysis pipeline for {base_symbol}"}
-    except Exception as e:
-        logger.error(f"Error during on-demand analysis for {symbol_ns}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+
+    async def _run_pipeline():
+        from app.services.market_data import fetch_and_store_klines
+        from app.services.pattern_detector import detect_patterns_for_symbol
+        from app.services.confluence_scorer import process_new_patterns
+        from app.services.opportunity_radar import detect_opportunities
+        from app.services.corporate_events import fetch_and_store_yahoo_news
+        logger.info(f"BG pipeline starting for {base_symbol}")
+        try:
+            # 1. Fetch all timeframes in parallel — much faster
+            await asyncio.gather(
+                fetch_and_store_klines(base_symbol, interval="1m"),
+                fetch_and_store_klines(base_symbol, interval="5m"),
+                fetch_and_store_klines(base_symbol, interval="15m"),
+                fetch_and_store_klines(base_symbol, interval="1d"),
+                return_exceptions=True,
+            )
+            # 2. News, patterns, signals
+            await fetch_and_store_yahoo_news(symbol_ns)
+            await detect_patterns_for_symbol(base_symbol, timeframe="15m")
+            await detect_patterns_for_symbol(base_symbol, timeframe="1d")
+            await detect_opportunities()
+            await process_new_patterns()
+            logger.info(f"BG pipeline complete for {base_symbol}")
+        except Exception as e:
+            logger.error(f"BG pipeline error for {base_symbol}: {e}", exc_info=True)
+
+    background_tasks.add_task(_run_pipeline)
+    return {"status": "processing", "symbol": base_symbol}
+
+
+@router.get("/stock/{symbol}/status")
+async def stock_data_status(symbol: str = Path(...), db: AsyncSession = Depends(get_db)):
+    """Poll this after /analyze to check when OHLCV data is ready."""
+    base_symbol = symbol.upper().replace(".NS", "")
+    count_res = await db.execute(
+        select(func.count(OHLCCandle.id)).where(
+            OHLCCandle.symbol == base_symbol,
+            OHLCCandle.timeframe == "1d",
+        )
+    )
+    count = count_res.scalar() or 0
+    return {"symbol": base_symbol, "ready": count > 0, "candle_count": count}
+
         
 
 # ── Stock Data ────────────────────────────────────────────────────────────────
