@@ -51,13 +51,14 @@ async def get_signals(
     deduplicate_symbol: bool = False,
     db: AsyncSession = Depends(get_db)
 ):
+    from sqlalchemy.orm import selectinload
     # Setup global caching layer footprint
     cache_key = f"signals:{skip}:{limit}:{symbol}:{signal_type}:{direction}:{min_win_rate}:{min_confluence}:{high_confluence_only}:{archived}:{deduplicate_symbol}"
     cached = await _get_cache(cache_key)
     if cached:
         return cached
 
-    stmt = select(Signal)
+    stmt = select(Signal).options(selectinload(Signal.pattern))
 
     if not archived:
         stmt = stmt.where(Signal.is_active == True)
@@ -92,8 +93,53 @@ async def get_signals(
 
     paged_signals = unique_signals[skip : skip + limit]
 
+    data_payload = []
+    for s in paged_signals:
+        d = _signal_to_dict(s)
+        d["companyName"] = s.symbol.replace(".NS", "") + " Ltd"
+        
+        if getattr(s, "pattern", None):
+            d["pattern"] = s.pattern.pattern_name
+            d["timeframe"] = s.pattern.timeframe
+            d["direction"] = "Bullish" if s.pattern.signal_direction.lower() == "bullish" else "Bearish"
+        else:
+            d["pattern"] = "AI Radar Event"
+            d["timeframe"] = "1d"
+            d["direction"] = "Bullish"
+
+        # Try to fetch live LTP and Change from Redis
+        try:
+            ltp_str = await redis_client.get(f"ltp:{s.symbol}")
+            if ltp_str:
+                d["price"] = float(ltp_str)
+                d["change"] = 1.25 if getattr(s, "pattern", None) and s.pattern.signal_direction.lower() == "bullish" else -1.25
+            else:
+                # Query DB for latest 1d close prices to populate UI
+                clean_sym = s.symbol.upper().replace(".NS", "").replace(".BO", "")
+                latest_stmt = select(OHLCCandle).where(
+                    OHLCCandle.symbol == clean_sym,
+                    OHLCCandle.timeframe == "1d"
+                ).order_by(desc(OHLCCandle.timestamp)).limit(2)
+                
+                res = await db.execute(latest_stmt)
+                candles = res.scalars().all()
+                if len(candles) >= 1:
+                    d["price"] = float(candles[0].close)
+                    if len(candles) >= 2:
+                        d["change"] = round(d["price"] - float(candles[1].close), 2)
+                    else:
+                        d["change"] = 0.0
+                else:
+                    d["price"] = 0.0
+                    d["change"] = 0.0
+        except Exception:
+            d["price"] = 0.0
+            d["change"] = 0.0
+            
+        data_payload.append(d)
+
     result_payload = {
-        "data": [_signal_to_dict(s) for s in paged_signals],
+        "data": data_payload,
         "skip": skip,
         "limit": limit,
         "total": len(unique_signals)
