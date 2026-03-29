@@ -1,0 +1,123 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* ── Dark theme (default) ── */
+    --background: 222 20% 7%;      /* #0D1117 deep navy */
+    --foreground: 210 40% 95%;     /* near white */
+    --surface: 222 18% 11%;        /* #141B27 card bg */
+    --surface-2: 222 16% 15%;      /* slightly lighter */
+    --surface-3: 222 14% 19%;      /* interactive hover */
+    --border: 220 15% 22%;         /* subtle border */
+    --border-subtle: 220 13% 17%;  /* very subtle */
+    --muted: 215 20% 45%;          /* secondary text */
+    --accent: 199 89% 55%;         /* #22D3EE electric teal */
+    --accent-2: 262 80% 65%;       /* #A78BFA violet accent */
+    --bullish: 158 64% 52%;        /* #34D399 green */
+    --bearish: 0 70% 65%;          /* #F87171 rose */
+    --warning: 38 92% 60%;         /* #FBBF24 amber */
+    --card: 222 18% 11%;
+    --radius: 0.75rem;
+  }
+}
+
+@layer base {
+  * { box-sizing: border-box; }
+  
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans;
+    overflow-x: hidden;
+  }
+
+  /* Scrollbar styling */
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { @apply bg-transparent; }
+  ::-webkit-scrollbar-thumb { @apply bg-border rounded-full; }
+  ::-webkit-scrollbar-thumb:hover { @apply bg-muted; }
+}
+
+@layer components {
+  /* Glass morphism card */
+  .glass-card {
+    @apply bg-surface/80 backdrop-blur-xl border border-border-subtle rounded-2xl;
+  }
+
+  /* Gradient text */
+  .gradient-text {
+    @apply bg-gradient-to-r from-accent to-accent-2 bg-clip-text text-transparent;
+  }
+
+  /* Shimmer skeleton */
+  .skeleton {
+    @apply bg-surface-2 rounded-lg overflow-hidden relative;
+    background: linear-gradient(
+      90deg,
+      hsl(var(--surface-2)) 0%,
+      hsl(var(--surface-3)) 50%,
+      hsl(var(--surface-2)) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+  }
+
+  /* Confluence dots */
+  .dot { @apply w-2.5 h-2.5 rounded-full; }
+  .dot-filled { @apply dot bg-accent; }
+  .dot-empty { @apply dot border border-border bg-transparent; }
+
+  /* Signal direction badges */
+  .badge-bullish {
+    @apply inline-flex items-center gap-1 px-2.5 py-1 rounded-full
+           bg-bullish/10 text-bullish text-xs font-semibold;
+  }
+  .badge-bearish {
+    @apply inline-flex items-center gap-1 px-2.5 py-1 rounded-full
+           bg-bearish/10 text-bearish text-xs font-semibold;
+  }
+  .badge-neutral {
+    @apply inline-flex items-center gap-1 px-2.5 py-1 rounded-full
+           bg-warning/10 text-warning text-xs font-semibold;
+  }
+
+  /* Glow effect for accent elements */
+  .accent-glow {
+    box-shadow: 0 0 30px hsl(var(--accent) / 0.15);
+  }
+
+  /* Bottom nav safe area */
+  .bottom-nav-safe {
+    padding-bottom: env(safe-area-inset-bottom, 16px);
+  }
+}
+
+@layer utilities {
+  .text-balance { text-wrap: balance; }
+  
+  /* Ticker tape */
+  .ticker-wrap {
+    overflow: hidden;
+    white-space: nowrap;
+  }
+  .ticker-content {
+    display: inline-flex;
+    animation: ticker 40s linear infinite;
+  }
+  .ticker-content:hover { animation-play-state: paused; }
+  
+  /* Hide scrollbar but allow scrolling */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar { display: none; }
+}
