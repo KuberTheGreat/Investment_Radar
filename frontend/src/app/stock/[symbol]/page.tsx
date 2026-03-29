@@ -10,6 +10,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useEvents, usePatterns, useOHLCV, useOnDemandAnalysis, useWatchlist } from "@/lib/hooks";
+import AiAnalysis from "@/components/AiAnalysis";
 import { Activity, Calendar, Loader2, Star } from "lucide-react";
 import { use, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/lib/authContext";
@@ -141,6 +142,11 @@ export default function StockPage({ params }: StockPageProps) {
                 </div>
               )}
             </div>
+          </ErrorBoundary>
+
+          {/* AI Analysis Section */}
+          <ErrorBoundary context="AiAnalysis">
+            <AiAnalysis ticker={upperSymbol} />
           </ErrorBoundary>
 
           {/* Patterns + Events row */}
