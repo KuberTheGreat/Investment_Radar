@@ -156,3 +156,7 @@ app.include_router(watchlist_router, prefix="/api/watchlist", tags=["watchlist"]
 from app.api.broker import router as broker_router
 
 app.include_router(broker_router, prefix="/api/broker", tags=["broker"])
+
+from app.api.analysis import router as analysis_router
+
+app.include_router(analysis_router, tags=["analysis"])
