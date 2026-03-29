@@ -2,4 +2,290 @@
 > frontend@1.0.0 build
 > next build
 
-sh: next: command not found
+⚠ Warning: Next.js inferred your workspace root, but it may not be correct.
+ We detected multiple lockfiles and selected the directory of /Users/kuber/package-lock.json as the root directory.
+ To silence this warning, set `turbopack.root` in your Next.js config, or consider removing one of the lockfiles if it's not needed.
+   See https://nextjs.org/docs/app/api-reference/config/next-config-js/turbopack#root-directory for more information.
+ Detected additional lockfiles: 
+   * /Users/kuber/Desktop/College/AXIOS Learn/Investment Radar/frontend/package-lock.json
+
+▲ Next.js 16.2.1 (Turbopack)
+
+  Creating an optimized production build ...
+(node:17071) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/kuber/Desktop/College/AXIOS%20Learn/Investment%20Radar/frontend/tailwind.config.ts?id=1774705827060 is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/kuber/Desktop/College/AXIOS Learn/Investment Radar/frontend/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+> Build error occurred
+Error: Turbopack build failed with 9 errors:
+./Desktop/College/AXIOS Learn/Investment Radar/frontend/src/lib/api.ts:2:1
+Module not found: Can't resolve './utils'
+  [90m1 |[0m ...[90m─ Typed API clie...[0m
+[31m[1m>[0m [90m2 |[0m ... logger } [36mfrom[0m [32m"...[0m
+  [90m  |[0m    [31m[1m^^^^^^^^^^^^^^^^^^^[0m
+  [90m3 |[0m ...
+  [90m4 |[0m ...[33mI_BASE[0m = process...
+  [90m5 |[0m ...
+
+
+
+Import traces:
+  Client Component Browser:
+    ./Desktop/College/AXIOS Learn/Investment Radar/frontend/src/lib/api.ts [Client Component Browser]
+    ./Desktop/College/AXIOS Learn/Investment Radar/frontend/src/components/layout/TopBar.tsx [Client Component Browser]
+    ./Desktop/College/AXIOS Learn/Investment Radar/frontend/src/app/watchlist/page.tsx [Client Component Browser]
+    ./Desktop/College/AXIOS Learn/Investment Radar/frontend/src/app/watchlist/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./Desktop/College/AXIOS Learn/Investment Radar/frontend/src/lib/api.ts [Client Component SSR]
+    ./Desktop/College/AXIOS Learn/Investment Radar/frontend/src/components/layout/TopBar.tsx [Client Component SSR]
+    ./Desktop/College/AXIOS Learn/Investment Radar/frontend/src/app/watchlist/page.tsx [Client Component SSR]
+    ./Desktop/College/AXIOS Learn/Investment Radar/frontend/src/app/watchlist/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./Desktop/College/AXIOS Learn/Investment Radar/frontend/src/lib/hooks.ts:17:1
+Module not found: Can't resolve './utils'
+  [90m15 |[0m ...[32m/api"[0m;
+  [90m16 |[0m ...useAuth } [36mfrom[0m [32m...[0m
+[31m[1m>[0m [90m17 |[0m ...logger } [36mfrom[0m [32m"...[0m
+  [90m   |[0m    [31m[1m^^^^^^^^^^^^^^^^^^[0m
+  [90m18 |[0m ...
+  [90m19 |[0m ...[90m─ Query key fac...[0m
+  [90m20 |[0m ...
+
+
+
+Import traces:
+  Client Component Browser:
+    ./Desktop/College/AXIOS Learn/Investment Radar/frontend/src/lib/hooks.ts [Client Component Browser]
+    ./Desktop/College/AXIOS Learn/Investment Radar/frontend/src/app/profile/page.tsx [Client Component Browser]
+    ./Desktop/College/AXIOS Learn/Investment Radar/frontend/src/app/profile/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./Desktop/College/AXIOS Learn/Investment Radar/frontend/src/lib/hooks.ts [Client Component SSR]
+    ./Desktop/College/AXIOS Learn/Investment Radar/frontend/src/app/profile/page.tsx [Client Component SSR]
+    ./Desktop/College/AXIOS Learn/Investment Radar/frontend/src/app/profile/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./Desktop/College/AXIOS Learn/Investment Radar/frontend/src/components/features/CandlestickChart.tsx:10:1
+Module not found: Can't resolve '@/lib/utils'
+  [90m 8 |[0m ...[33mrChart2[0m } [36mfrom[0m [32m...[0m
+  [90m 9 |[0m ... } [36mfrom[0m [32m"@/comp...[0m
+[31m[1m>[0m [90m10 |[0m ...gger } [36mfrom[0m [32m"@/...[0m
+  [90m   |[0m    [31m[1m^^^^^^^^^^^^^^^^^^[0m
+  [90m11 |[0m ...
+  [90m12 |[0m ...[33mRAMES[0m = [
+  [90m13 |[0m ...[32m"1m"[0m,  label: [32m"...[0m
+
+Import map: aliased to relative './src/lib/utils' inside of [project]/Desktop/College/AXIOS Learn/Investment Radar/frontend
+
+
+Import traces:
+  Client Component Browser:
+    ./Desktop/College/AXIOS Learn/Investment Radar/frontend/src/components/features/CandlestickChart.tsx [Client Component Browser]
+    ./Desktop/College/AXIOS Learn/Investment Radar/frontend/src/app/stock/[symbol]/page.tsx [Client Component Browser]
+    ./Desktop/College/AXIOS Learn/Investment Radar/frontend/src/app/stock/[symbol]/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./Desktop/College/AXIOS Learn/Investment Radar/frontend/src/components/features/CandlestickChart.tsx [Client Component SSR]
+    ./Desktop/College/AXIOS Learn/Investment Radar/frontend/src/app/stock/[symbol]/page.tsx [Client Component SSR]
+    ./Desktop/College/AXIOS Learn/Investment Radar/frontend/src/app/stock/[symbol]/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./Desktop/College/AXIOS Learn/Investment Radar/frontend/src/components/features/CorporateEventItem.tsx:8:1
+Module not found: Can't resolve '@/lib/utils'
+  [90m 6 |[0m ...
+  [90m 7 |[0m ... } [36mfrom[0m [32m"@/lib/...[0m
+[31m[1m>[0m [90m 8 |[0m ...tEventTypeLabel...
+  [90m   |[0m    [31m[1m^^^^^^^^^^^^^^^^^^[0m
+  [90m 9 |[0m ...[32m@/components/ui...[0m
+  [90m10 |[0m ...[32momponents/ui/cn"[0m;
+  [90m11 |[0m ...
+
+Import map: aliased to relative './src/lib/utils' inside of [project]/Desktop/College/AXIOS Learn/Investment Radar/frontend
+
+
+Import traces:
+  Client Component Browser:
+    ./Desktop/College/AXIOS Learn/Investment Radar/frontend/src/components/features/CorporateEventItem.tsx [Client Component Browser]
+    ./Desktop/College/AXIOS Learn/Investment Radar/frontend/src/app/stock/[symbol]/page.tsx [Client Component Browser]
+    ./Desktop/College/AXIOS Learn/Investment Radar/frontend/src/app/stock/[symbol]/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./Desktop/College/AXIOS Learn/Investment Radar/frontend/src/components/features/CorporateEventItem.tsx [Client Component SSR]
+    ./Desktop/College/AXIOS Learn/Investment Radar/frontend/src/app/stock/[symbol]/page.tsx [Client Component SSR]
+    ./Desktop/College/AXIOS Learn/Investment Radar/frontend/src/app/stock/[symbol]/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./Desktop/College/AXIOS Learn/Investment Radar/frontend/src/components/features/HealthIndicator.tsx:4:1
+Module not found: Can't resolve '@/lib/utils'
+  [90m2 |[0m ...[33mity[0m, [33mAlertCircle[0m..[33m.[0m
+  [90m3 |[0m ...pelineHealth } [36mf...[0m
+[31m[1m>[0m [90m4 |[0m ...tTimeAgo } [36mfrom[0m [32m...[0m
+  [90m  |[0m    [31m[1m^^^^^^^^^^^^^^^^^^^[0m
+  [90m5 |[0m ...[36mfrom[0m [32m"@/componen...[0m
+  [90m6 |[0m ...
+  [90m7 |[0m ...[36mn[0m [33mHealthIndicato.[0m..
+
+Import map: aliased to relative './src/lib/utils' inside of [project]/Desktop/College/AXIOS Learn/Investment Radar/frontend
+
+
+Import traces:
+  Client Component Browser:
+    ./Desktop/College/AXIOS Learn/Investment Radar/frontend/src/components/features/HealthIndicator.tsx [Client Component Browser]
+    ./Desktop/College/AXIOS Learn/Investment Radar/frontend/src/app/page.tsx [Client Component Browser]
+    ./Desktop/College/AXIOS Learn/Investment Radar/frontend/src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./Desktop/College/AXIOS Learn/Investment Radar/frontend/src/components/features/HealthIndicator.tsx [Client Component SSR]
+    ./Desktop/College/AXIOS Learn/Investment Radar/frontend/src/app/page.tsx [Client Component SSR]
+    ./Desktop/College/AXIOS Learn/Investment Radar/frontend/src/app/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./Desktop/College/AXIOS Learn/Investment Radar/frontend/src/components/features/LiveAlertFeed.tsx:5:1
+Module not found: Can't resolve '@/lib/utils'
+  [90m3 |[0m ...erts, [33mAlertItem[0m ..[36m.[0m
+  [90m4 |[0m ...[33mState[0m } [36mfrom[0m [32m"@/...[0m
+[31m[1m>[0m [90m5 |[0m ...tTimeAgo } [36mfrom[0m [32m...[0m
+  [90m  |[0m    [31m[1m^^^^^^^^^^^^^^^^^^^[0m
+  [90m6 |[0m ...[36mfrom[0m [32m"@/componen...[0m
+  [90m7 |[0m ...[36mom[0m [32m"next/link"[0m;
+  [90m8 |[0m ...
+
+Import map: aliased to relative './src/lib/utils' inside of [project]/Desktop/College/AXIOS Learn/Investment Radar/frontend
+
+
+Import traces:
+  Client Component Browser:
+    ./Desktop/College/AXIOS Learn/Investment Radar/frontend/src/components/features/LiveAlertFeed.tsx [Client Component Browser]
+    ./Desktop/College/AXIOS Learn/Investment Radar/frontend/src/app/page.tsx [Client Component Browser]
+    ./Desktop/College/AXIOS Learn/Investment Radar/frontend/src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./Desktop/College/AXIOS Learn/Investment Radar/frontend/src/components/features/LiveAlertFeed.tsx [Client Component SSR]
+    ./Desktop/College/AXIOS Learn/Investment Radar/frontend/src/app/page.tsx [Client Component SSR]
+    ./Desktop/College/AXIOS Learn/Investment Radar/frontend/src/app/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./Desktop/College/AXIOS Learn/Investment Radar/frontend/src/components/features/SignalCard.tsx:10:1
+Module not found: Can't resolve '@/lib/utils'
+  [90m 8 |[0m ...[36mort[0m { [33mBadge[0m } [36mf...[0m
+  [90m 9 |[0m ...[36mort[0m { [33mConfluenc...[0m
+[31m[1m>[0m [90m10 |[0m ...[36mort[0m {
+  [90m   |[0m    [31m[1m^^^^^^^[0m
+[31m[1m>[0m [90m11 |[0m ...ormatPercent,
+  [90m   |[0m    [31m[1m^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m12 |[0m ...ormatTimeAgo,
+  [90m   |[0m    [31m[1m^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m13 |[0m ...etSignalTypeBg,
+  [90m   |[0m    [31m[1m^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m14 |[0m ...[36mrom[0m [32m"@/lib/utils"[0m;
+  [90m   |[0m    [31m[1m^^^^^^^^^^^^^^^^^^[0m
+  [90m15 |[0m ...[36mort[0m { cn } [36mfrom[0m.[32m..[0m
+  [90m16 |[0m ...
+  [90m17 |[0m ...[36merface[0m [33mSignalCa...[0m
+
+Import map: aliased to relative './src/lib/utils' inside of [project]/Desktop/College/AXIOS Learn/Investment Radar/frontend
+
+
+Import traces:
+  Client Component Browser:
+    ./Desktop/College/AXIOS Learn/Investment Radar/frontend/src/components/features/SignalCard.tsx [Client Component Browser]
+    ./Desktop/College/AXIOS Learn/Investment Radar/frontend/src/components/features/SignalList.tsx [Client Component Browser]
+    ./Desktop/College/AXIOS Learn/Investment Radar/frontend/src/app/signals/[id]/page.tsx [Client Component Browser]
+    ./Desktop/College/AXIOS Learn/Investment Radar/frontend/src/app/signals/[id]/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./Desktop/College/AXIOS Learn/Investment Radar/frontend/src/components/features/SignalCard.tsx [Client Component SSR]
+    ./Desktop/College/AXIOS Learn/Investment Radar/frontend/src/components/features/SignalList.tsx [Client Component SSR]
+    ./Desktop/College/AXIOS Learn/Investment Radar/frontend/src/app/signals/[id]/page.tsx [Client Component SSR]
+    ./Desktop/College/AXIOS Learn/Investment Radar/frontend/src/app/signals/[id]/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./Desktop/College/AXIOS Learn/Investment Radar/frontend/src/components/features/SignalDetailPanel.tsx:17:1
+Module not found: Can't resolve '@/lib/utils'
+  [90m15 |[0m ...[33mtItem[0m } [36mfrom[0m [32m"....[0m
+  [90m16 |[0m ... [36mfrom[0m [32m"./AIExpl...[0m
+[31m[1m>[0m [90m17 |[0m ..., formatPercent...
+  [90m   |[0m    [31m[1m^^^^^^^^^^^^^^^^^^[0m
+  [90m18 |[0m ...[32mcomponents/ui/cn"[0m;
+  [90m19 |[0m ...
+  [90m20 |[0m ...[33mPanelProps[0m {
+
+Import map: aliased to relative './src/lib/utils' inside of [project]/Desktop/College/AXIOS Learn/Investment Radar/frontend
+
+
+Import traces:
+  Client Component Browser:
+    ./Desktop/College/AXIOS Learn/Investment Radar/frontend/src/components/features/SignalDetailPanel.tsx [Client Component Browser]
+    ./Desktop/College/AXIOS Learn/Investment Radar/frontend/src/app/signals/[id]/page.tsx [Client Component Browser]
+    ./Desktop/College/AXIOS Learn/Investment Radar/frontend/src/app/signals/[id]/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./Desktop/College/AXIOS Learn/Investment Radar/frontend/src/components/features/SignalDetailPanel.tsx [Client Component SSR]
+    ./Desktop/College/AXIOS Learn/Investment Radar/frontend/src/app/signals/[id]/page.tsx [Client Component SSR]
+    ./Desktop/College/AXIOS Learn/Investment Radar/frontend/src/app/signals/[id]/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./Desktop/College/AXIOS Learn/Investment Radar/frontend/src/components/ui/ErrorBoundary.tsx:4:1
+Module not found: Can't resolve '@/lib/utils'
+  [90m2 |[0m ...[33mct[0m [36mfrom[0m [32m"react"[0m;
+  [90m3 |[0m ...[33mlertTriangle[0m, [33mRe...[0m
+[31m[1m>[0m [90m4 |[0m ...ogger } [36mfrom[0m [32m"@/...[0m
+  [90m  |[0m    [31m[1m^^^^^^^^^^^^^^^^^^^[0m
+  [90m5 |[0m ...
+  [90m6 |[0m ...[33mErrorBoundarySta..[0m.
+  [90m7 |[0m ...: boolean;
+
+Import map: aliased to relative './src/lib/utils' inside of [project]/Desktop/College/AXIOS Learn/Investment Radar/frontend
+
+
+Import traces:
+  Client Component Browser:
+    ./Desktop/College/AXIOS Learn/Investment Radar/frontend/src/components/ui/ErrorBoundary.tsx [Client Component Browser]
+    ./Desktop/College/AXIOS Learn/Investment Radar/frontend/src/app/page.tsx [Client Component Browser]
+    ./Desktop/College/AXIOS Learn/Investment Radar/frontend/src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./Desktop/College/AXIOS Learn/Investment Radar/frontend/src/components/ui/ErrorBoundary.tsx [Client Component SSR]
+    ./Desktop/College/AXIOS Learn/Investment Radar/frontend/src/app/page.tsx [Client Component SSR]
+    ./Desktop/College/AXIOS Learn/Investment Radar/frontend/src/app/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+    at <unknown> (./Desktop/College/AXIOS Learn/Investment Radar/frontend/src/lib/api.ts:2:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (./Desktop/College/AXIOS Learn/Investment Radar/frontend/src/lib/hooks.ts:17:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (./Desktop/College/AXIOS Learn/Investment Radar/frontend/src/components/features/CandlestickChart.tsx:10:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (./Desktop/College/AXIOS Learn/Investment Radar/frontend/src/components/features/CorporateEventItem.tsx:8:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (./Desktop/College/AXIOS Learn/Investment Radar/frontend/src/components/features/HealthIndicator.tsx:4:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (./Desktop/College/AXIOS Learn/Investment Radar/frontend/src/components/features/LiveAlertFeed.tsx:5:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (./Desktop/College/AXIOS Learn/Investment Radar/frontend/src/components/features/SignalCard.tsx:10:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (./Desktop/College/AXIOS Learn/Investment Radar/frontend/src/components/features/SignalDetailPanel.tsx:17:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (./Desktop/College/AXIOS Learn/Investment Radar/frontend/src/components/ui/ErrorBoundary.tsx:4:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)

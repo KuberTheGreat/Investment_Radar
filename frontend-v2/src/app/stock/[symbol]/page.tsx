@@ -28,23 +28,25 @@ export default function StockAnalysisPage({ params }: PageProps) {
   const [sheetOpen, setSheetOpen] = useState(false);
 
   // 1. Fetch live signals to find current active signal
-  const { data: signals = [], isLoading: isLoadingSignals } = useQuery({
+  const { data: signalsResponse, isLoading: isLoadingSignals } = useQuery({
     queryKey: ['signals'],
-    queryFn: radarApi.getSignals,
+    queryFn: () => radarApi.getSignals(),
   });
+  
+  const signals = signalsResponse?.data || [];
 
   const signal = signals.find(s => s.symbol === upperSymbol);
 
   // 2. Fetch specific events for this symbol
   const { data: events = [], isLoading: isLoadingEvents } = useQuery({
     queryKey: ['events', upperSymbol],
-    queryFn: () => radarApi.getStockEvents(upperSymbol),
+    queryFn: () => radarApi.getEvents(upperSymbol),
   });
 
   // 3. Fetch specific patterns for this symbol
   const { data: history = [], isLoading: isLoadingPatterns } = useQuery({
     queryKey: ['patterns', upperSymbol],
-    queryFn: () => radarApi.getStockPatterns(upperSymbol),
+    queryFn: () => radarApi.getPatterns(upperSymbol),
   });
 
   if (isLoadingSignals) {
@@ -106,12 +108,12 @@ export default function StockAnalysisPage({ params }: PageProps) {
 
         {/* 4. Confluence Score */}
         <ConfluenceScoreCard
-          score={signal.confluenceScore}
-          patternName={signal.pattern}
+          score={signal.confluenceScore as any}
+          patternName={(signal as any).pattern}
         />
 
         {/* 5. AI Explanation + Win Rates + Evidence */}
-        <AISignalExplanation signal={signal} />
+        <AISignalExplanation signal={signal as any} />
 
         {/* Divider */}
         <div className="mx-4 border-t border-border-subtle" />
@@ -126,7 +128,7 @@ export default function StockAnalysisPage({ params }: PageProps) {
         <PatternHistoryTable
           history={history}
           symbol={upperSymbol}
-          patternName={signal.pattern}
+          patternName={(signal as any).pattern}
         />
       </div>
 

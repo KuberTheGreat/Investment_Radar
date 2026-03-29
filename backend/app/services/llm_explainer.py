@@ -418,5 +418,43 @@ Return ONLY valid JSON with exactly two keys:
         yield "data: [DONE]\n\n"
         logger.info(f"stream_deep_dive: Completed for {signal_id_str}")
 
+    async def stream_raw_chat(self, messages: list[dict]) -> AsyncGenerator[str, None]:
+        """
+        Stream raw text completions for a generic conversational LLM prompt.
+        Accepts a list of dictionaries with 'role' and 'content'.
+        """
+        if not self.client:
+            yield "Error: AI capabilities are currently disabled (GROQ API key missing)."
+            return
+
+        system_msg = {
+            "role": "system",
+            "content": (
+                "You are an expert, helpful Indian Stock Market AI Advisor for the 'Investment Radar' platform. "
+                "You assist users in understanding stock market basics, technical terms, specific stocks, and their portfolios. "
+                "Never hallucinate real-time price or news data if you don't have it. Keep your answers concise, structured (bullet points if helpful), "
+                "and no longer than a few short paragraphs. "
+                "Always remind users you provide educational insights, not financial advice, for specific trade recommendations."
+            )
+        }
+
+        call_messages = [system_msg] + messages
+
+        try:
+            logger.info("stream_raw_chat: Initiating conversation stream with Groq")
+            stream = await self.client.chat.completions.create(
+                model=self.model,
+                messages=call_messages,
+                stream=True,
+                max_tokens=1000
+            )
+
+            async for chunk in stream:
+                if chunk.choices and chunk.choices[0].delta.content:
+                    yield chunk.choices[0].delta.content
+        except Exception as e:
+            logger.error(f"stream_raw_chat: Error occurred during execution: {e}")
+            yield f"\n\n[System] Connection interrupted: {str(e)}"
+
 
 llm_service = LLMExplainerService()

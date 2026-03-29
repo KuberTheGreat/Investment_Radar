@@ -467,16 +467,35 @@ async def get_stock_events(
     ]
 
 
-# ── LLM Explain (SSE) ─────────────────────────────────────────────────────────
+# ── LLM Chat & Explain ────────────────────────────────────────────────────────
 
 
 @router.get("/explain/{signal_id}")
 async def explain_signal(
     signal_id: str = Path(...), db: AsyncSession = Depends(get_db)
 ):
-    """Stream deep-dive LLM explanation via SSE."""
+    """Stream deep-dive LLM explanation via SSE (GET only)."""
     return EventSourceResponse(llm_service.stream_deep_dive(signal_id, db))
 
+from pydantic import BaseModel
+class ChatMessage(BaseModel):
+    role: str
+    content: str
+    
+class ChatRequest(BaseModel):
+    messages: list[ChatMessage]
+
+@router.post("/chat")
+async def chat_endpoint(request: ChatRequest):
+    """Raw streaming text response for conversational AI advisor."""
+    from fastapi.responses import StreamingResponse
+    
+    messages_dicts = [{"role": msg.role, "content": msg.content} for msg in request.messages]
+    
+    return StreamingResponse(
+        llm_service.stream_raw_chat(messages_dicts),
+        media_type="text/plain"
+    )
 
 # ── Alerts (SSE) ───────────────────────────────────────────────────────────────
 

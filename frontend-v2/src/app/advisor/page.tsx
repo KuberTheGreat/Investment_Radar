@@ -50,10 +50,12 @@ function AdvisorChat() {
   const streamRef = useRef<EventSource | null>(null);
   const hasAutoTriggered = useRef(false);
 
-  const { data: signals = [] } = useQuery({
+  const { data: signalsData } = useQuery({
     queryKey: ['signals'],
-    queryFn: radarApi.getSignals,
+    queryFn: () => radarApi.getSignals(),
   });
+  
+  const signals = signalsData?.data || [];
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -151,6 +153,60 @@ function AdvisorChat() {
     };
   };
 
+  const triggerChat = async (history: Message[]) => {
+    setIsThinking(true);
+    const aiMsgId = (Date.now() + 1).toString();
+    setMessages(prev => [...prev, {
+      id: aiMsgId,
+      role: "ai",
+      content: "",
+      isStreaming: true
+    }]);
+
+    try {
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: history.map(m => ({ 
+            role: m.role === "ai" ? "assistant" : m.role, 
+            content: m.content 
+          }))
+        })
+      });
+
+      setIsThinking(false);
+
+      if (!response.ok) {
+        throw new Error(`Server returned ${response.status} ${response.statusText}`);
+      }
+      if (!response.body) throw new Error("No response body");
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) {
+          setMessages(prev => prev.map(m =>
+            m.id === aiMsgId ? { ...m, isStreaming: false } : m
+          ));
+          break;
+        }
+        
+        const chunk = decoder.decode(value);
+        setMessages(prev => prev.map(m =>
+          m.id === aiMsgId ? { ...m, content: m.content + chunk } : m
+        ));
+      }
+    } catch (e) {
+      setIsThinking(false);
+      setMessages(prev => prev.map(m =>
+        m.id === aiMsgId ? { ...m, isStreaming: false, content: "Sorry, I'm having trouble connecting to the advisory service." } : m
+      ));
+    }
+  };
+
   const sendMessage = async (text: string) => {
     if (!text.trim() || isThinking) return;
 
@@ -166,15 +222,7 @@ function AdvisorChat() {
     if (matchedSignal) {
       triggerExplanation(matchedSignal.id, matchedSignal.symbol);
     } else {
-      // Fallback string for demo if we don't recognize a real signal symbol
-      setIsThinking(true);
-      await new Promise(r => setTimeout(r, 900));
-      setIsThinking(false);
-      setMessages(prev => [...prev, {
-        id: (Date.now() + 1).toString(),
-        role: "ai",
-        content: "I can help explain real-time market signals. Try asking me about active signals like TATAMOTORS or RELIANCE to get a deep-dive technical reasoning.",
-      }]);
+      triggerChat([...messages, userMsg]);
     }
   };
 

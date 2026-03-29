@@ -18,11 +18,12 @@ type Filter = "all" | "bullish" | "bearish" | "high";
 export default function DiscoverPage() {
   const [filter, setFilter] = useState<Filter>("all");
 
-  const { data: signals = [], isLoading, error } = useQuery({
+  const { data: signalsResponse, isLoading, error } = useQuery({
     queryKey: ['signals'],
-    queryFn: radarApi.getSignals,
+    queryFn: () => radarApi.getSignals(),
     refetchInterval: 15 * 60 * 1000, // refresh every 15 minutes
   });
+  const signals = signalsResponse?.data || [];
 
   const heroSignal = signals.find(s => s.confluenceScore === 3) ?? signals[0];
 
