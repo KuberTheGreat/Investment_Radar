@@ -8,7 +8,12 @@ DATABASE_URL = os.getenv(
     "postgresql+asyncpg://investor_user:investor_password@localhost:5433/investorradar",
 )
 
-engine = create_async_engine(DATABASE_URL, echo=False)
+engine = create_async_engine(
+    DATABASE_URL, 
+    echo=False,
+    pool_pre_ping=True,
+    pool_recycle=1800,
+)
 AsyncSessionLocal = async_sessionmaker(
     engine, class_=AsyncSession, expire_on_commit=False
 )
