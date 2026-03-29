@@ -3,6 +3,7 @@ from sqlalchemy import Column, String, Numeric, Integer, Boolean, DateTime
 from sqlalchemy.dialects.postgresql import TIMESTAMP, UUID
 from app.core.database import Base
 
+
 class DetectedPattern(Base):
     __tablename__ = "detected_patterns"
 
@@ -13,6 +14,7 @@ class DetectedPattern(Base):
     timeframe = Column(String(5), nullable=False)
     detected_at = Column(TIMESTAMP(timezone=True), nullable=False)
     created_at = Column(TIMESTAMP(timezone=True), nullable=False)
+
 
 class BacktestResult(Base):
     __tablename__ = "backtest_results"

@@ -1,3 +1,0 @@
-module.exports=[78031,(a,b,c)=>{let{createClientModuleProxy:d}=a.r(80902);a.n(d("[project]/Investment_Radar/frontend/node_modules/next/dist/client/components/builtin/global-error.js <module evaluation>"))},823,(a,b,c)=>{let{createClientModuleProxy:d}=a.r(80902);a.n(d("[project]/Investment_Radar/frontend/node_modules/next/dist/client/components/builtin/global-error.js"))},44460,a=>{"use strict";a.i(78031);var b=a.i(823);a.n(b)},37925,a=>{a.n(a.i(44460))}];
-
-//# sourceMappingURL=0bu4_next_dist_client_components_builtin_global-error_0wp--sr.js.map

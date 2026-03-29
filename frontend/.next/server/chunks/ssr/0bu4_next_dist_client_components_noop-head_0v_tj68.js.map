@@ -1,1 +1,0 @@
-{"version":3,"sources":["../../../../../../Investment_Radar/frontend/node_modules/next/src/client/components/noop-head.tsx"],"sourcesContent":["export default function NoopHead() {\n  return null\n}\n"],"names":["NoopHead"],"mappings":"6CAAe,SAASA,IACtB,OAAO,IACT,0EAFA,UAAA,qCAAwBA","ignoreList":[0]}

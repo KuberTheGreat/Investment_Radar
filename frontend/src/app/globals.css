@@ -1,0 +1,155 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@import "tailwindcss";
+@config "../../tailwind.config.ts";
+
+/* ─── CSS Design Tokens ────────────────────────────────────────────────────── */
+:root {
+  --background: hsl(222, 47%, 4%);
+  --surface: hsl(222, 40%, 7%);
+  --surface-2: hsl(222, 35%, 10%);
+  --surface-3: hsl(222, 30%, 14%);
+  --border: hsl(222, 25%, 18%);
+  --border-subtle: hsl(222, 25%, 13%);
+  --foreground: hsl(210, 20%, 95%);
+  --muted: hsl(215, 15%, 55%);
+  --muted-2: hsl(215, 10%, 40%);
+  --accent: hsl(217, 91%, 60%);
+  --bullish: hsl(158, 64%, 52%);
+  --bearish: hsl(0, 84%, 60%);
+  --amber: hsl(38, 92%, 58%);
+
+  --sidebar-width: 240px;
+  --topbar-height: 60px;
+}
+
+/* ─── Base Styles ──────────────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: "Inter", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  min-height: 100vh;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--surface);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--muted-2);
+}
+
+/* ─── Glassmorphism Card ───────────────────────────────────────────────────── */
+@layer components {
+  .glass-card {
+    @apply bg-surface/80 backdrop-blur-md border border-border-subtle rounded-xl;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05);
+  }
+
+  .glass-card-hover {
+    @apply bg-surface/80 backdrop-blur-md border border-border-subtle rounded-xl transition-all duration-200;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05);
+  }
+  .glass-card-hover:hover {
+    @apply border-border -translate-y-0.5;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.07);
+  }
+
+  /* Input / Select base */
+  .input-base {
+    @apply bg-surface-2 border border-border text-foreground rounded-lg px-3 py-2 text-sm
+           focus:outline-none focus:border-accent/60 focus:ring-1 focus:ring-accent/30
+           transition-colors placeholder:text-muted-2;
+  }
+
+  /* Gradient text */
+  .gradient-text {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, #60a5fa, #34d399);
+  }
+
+  /* Glow dot (status indicator) */
+  .status-dot {
+    @apply w-2 h-2 rounded-full flex-shrink-0;
+  }
+  .status-dot-green {
+    @apply w-2 h-2 rounded-full flex-shrink-0 bg-bullish;
+    box-shadow: 0 0 6px var(--bullish);
+    animation: pulse-glow-green 2s ease-in-out infinite;
+  }
+  .status-dot-amber {
+    @apply w-2 h-2 rounded-full flex-shrink-0 bg-amber;
+    box-shadow: 0 0 6px var(--amber);
+  }
+  .status-dot-red {
+    @apply w-2 h-2 rounded-full flex-shrink-0 bg-bearish;
+    box-shadow: 0 0 6px var(--bearish);
+  }
+
+  /* Shimmer skeleton */
+  .skeleton {
+    @apply rounded-md bg-surface-3;
+    background: linear-gradient(90deg, hsl(222,30%,14%) 25%, hsl(222,30%,18%) 50%, hsl(222,30%,14%) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.8s linear infinite;
+  }
+
+  /* Sidebar nav link */
+  .nav-link {
+    @apply flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-muted
+           hover:text-foreground hover:bg-surface-2 transition-all duration-150 cursor-pointer;
+  }
+  .nav-link-active {
+    @apply flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-foreground bg-surface-2 border border-border
+           transition-all duration-150 cursor-pointer;
+  }
+}
+
+/* ─── Keyframe animations ──────────────────────────────────────────────────── */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes pulse-glow-green {
+  0%, 100% { box-shadow: 0 0 4px hsl(158,64%,52%); }
+  50% { box-shadow: 0 0 12px hsl(158,64%,52%); }
+}
+
+@keyframes slide-in-right {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes slide-in-up {
+  from { transform: translateY(8px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
