@@ -3,6 +3,7 @@ from sqlalchemy import Column, String, Numeric, BigInteger, Boolean, Date
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from app.core.database import Base
 
+
 class CorporateEvent(Base):
     __tablename__ = "corporate_events"
 

@@ -11,6 +11,7 @@ Provides HTTP interface for:
   GET  /api/broker/ltp/{symbol} : Live LTP for a symbol
   POST /api/broker/order        : Place an equity order
 """
+
 import asyncio
 import json
 import logging
@@ -28,8 +29,10 @@ router = APIRouter()
 
 # ── Request / Response schemas ────────────────────────────────────────────────
 
+
 class OrderRequest(BaseModel):
     """Schema for placing an equity order via the execution engine."""
+
     symbol: str = Field(..., description="NSE trading symbol, e.g. RELIANCE-EQ")
     exchange: str = Field("NSE", description="NSE | BSE")
     transaction_type: str = Field(..., description="BUY | SELL")
@@ -38,15 +41,21 @@ class OrderRequest(BaseModel):
     order_type: str = Field("MARKET", description="MARKET | LIMIT | STOPLOSS_LIMIT")
     price: float = Field(0.0, description="Limit price (0 for MARKET orders)")
     stop_loss_price: float = Field(0.0, description="Trigger price for stoploss orders")
-    tag: str = Field("InvestmentRadar_AI", description="Audit tag attached to the order")
+    tag: str = Field(
+        "InvestmentRadar_AI", description="Audit tag attached to the order"
+    )
 
 
 class SubscribeRequest(BaseModel):
     """Schema for subscribing symbols to live WebSocket feed."""
-    symbols: List[str] = Field(..., description="List of NSE symbols e.g. ['RELIANCE', 'TCS']")
+
+    symbols: List[str] = Field(
+        ..., description="List of NSE symbols e.g. ['RELIANCE', 'TCS']"
+    )
 
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
+
 
 @router.post("/connect", summary="Authenticate Angel One SmartAPI session")
 async def broker_connect():
@@ -65,7 +74,10 @@ async def broker_connect():
                 "are correctly set in your .env file."
             ),
         )
-    return {"status": "connected", "message": "Angel One session established and vaulted."}
+    return {
+        "status": "connected",
+        "message": "Angel One session established and vaulted.",
+    }
 
 
 @router.get("/status", summary="Angel One session status")
@@ -89,17 +101,20 @@ async def subscribe_symbols(request: SubscribeRequest):
     """
     status = broker_service.get_session_status()
     if not status["is_authenticated"]:
-        raise HTTPException(status_code=401, detail="Broker not authenticated. Call /connect first.")
+        raise HTTPException(
+            status_code=401, detail="Broker not authenticated. Call /connect first."
+        )
 
     if not market_ws._connected:
         from app.models.broker import BrokerSession
         from sqlalchemy import select
         from app.core.database import AsyncSessionLocal
+
         async with AsyncSessionLocal() as db:
             result = await db.execute(
                 select(BrokerSession).where(
                     BrokerSession.client_code == status["client_code"],
-                    BrokerSession.is_active == True
+                    BrokerSession.is_active == True,
                 )
             )
             session = result.scalars().first()
@@ -114,52 +129,30 @@ async def subscribe_symbols(request: SubscribeRequest):
     }
 
 
-@router.get("/stream/{symbol}", summary="SSE live price stream for a symbol")
-async def stream_price(symbol: str):
+@router.get("/prices", summary="Get current live prices for all active symbols")
+async def get_all_prices():
     """
-    Server-Sent Events endpoint that streams real-time price ticks
-    for the given symbol from Redis pub/sub.
-
-    The frontend subscribes to this endpoint once and receives updates
-    as fast as Angel One publishes them (typically 1-3 ticks/second).
-
-    Falls back to the Redis LTP cache if no fresh tick has arrived yet.
+    Returns a dictionary of all latest traded prices from the Redis cache.
+    Format: {"RELIANCE": 2854.50, "TCS": 3950.00}
+    This is designed for high-frequency frontend polling.
     """
-    sym = symbol.upper().replace(".NS", "")
-
-    async def event_generator():
-        import redis.asyncio as aioredis
-        r = aioredis.from_url(settings.REDIS_URL, decode_responses=True)
-        pubsub = r.pubsub()
-        channel = f"price:{sym}"
-        await pubsub.subscribe(channel)
-        logger.info(f"broker: SSE client subscribed to {channel}")
-
-        # Send cached LTP immediately so UI renders something before next tick
-        cached = await r.get(f"ltp:{sym}")
-        if cached:
-            yield f"data: {cached}\n\n"
-
-        try:
-            # Stream indefinitely — browser closes when user navigates away
-            async for message in pubsub.listen():
-                if message["type"] == "message":
-                    yield f"data: {message['data']}\n\n"
-        finally:
-            await pubsub.unsubscribe(channel)
-            await r.aclose()
-            logger.info(f"broker: SSE client disconnected from {channel}")
-
-    # Import here to avoid circular at module level
     from app.core.config import settings
-    return StreamingResponse(
-        event_generator(),
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "X-Accel-Buffering": "no",
-        },
-    )
+    import redis.asyncio as aioredis
+    r = aioredis.from_url(settings.REDIS_URL, decode_responses=True)
+    prices = {}
+    try:
+        keys = await r.keys("ltp:*")
+        for k in keys:
+            sym = k.replace("ltp:", "")
+            val = await r.get(k)
+            if val:
+                try:
+                    prices[sym] = float(val)
+                except ValueError:
+                    pass
+        return prices
+    finally:
+        await r.aclose()
 
 
 @router.post("/refresh", summary="Force session token refresh")
@@ -240,7 +233,9 @@ async def broker_ltp(
     try:
         ltp = broker_service.get_ltp(symbol, symbol_token, exchange)
         if ltp is None:
-            raise HTTPException(status_code=404, detail=f"LTP not available for {symbol}.")
+            raise HTTPException(
+                status_code=404, detail=f"LTP not available for {symbol}."
+            )
         return {"symbol": symbol, "ltp": ltp, "exchange": exchange}
     except RuntimeError as e:
         raise HTTPException(status_code=401, detail=str(e))
@@ -268,7 +263,9 @@ async def broker_place_order(request: OrderRequest):
             tag=request.tag,
         )
         if not result.get("success"):
-            raise HTTPException(status_code=422, detail=result.get("error", "Order failed."))
+            raise HTTPException(
+                status_code=422, detail=result.get("error", "Order failed.")
+            )
         return result
     except RuntimeError as e:
         raise HTTPException(status_code=401, detail=str(e))
@@ -276,4 +273,6 @@ async def broker_place_order(request: OrderRequest):
         raise
     except Exception as exc:
         logger.error(f"broker: /order error — {exc}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Order placement failed unexpectedly.")
+        raise HTTPException(
+            status_code=500, detail="Order placement failed unexpectedly."
+        )

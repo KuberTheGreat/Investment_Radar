@@ -101,16 +101,21 @@ Return ONLY valid JSON with exactly two keys:
 
         logger.info(f"_call_groq: Waiting for semaphore (model={model})...")
         async with _anthropic_semaphore:
-            logger.info(f"_call_groq: Acquired semaphore. Calling Groq API (model={model})...")
+            logger.info(
+                f"_call_groq: Acquired semaphore. Calling Groq API (model={model})..."
+            )
             try:
                 response = await self.client.chat.completions.create(
                     model=model,
                     messages=[
-                        {"role": "system", "content": "You are a financial analyst. Respond ONLY in valid JSON."},
-                        {"role": "user", "content": prompt}
+                        {
+                            "role": "system",
+                            "content": "You are a financial analyst. Respond ONLY in valid JSON.",
+                        },
+                        {"role": "user", "content": prompt},
                     ],
                     max_tokens=1500,
-                    response_format={"type": "json_object"}
+                    response_format={"type": "json_object"},
                 )
                 text = response.choices[0].message.content
                 # Strip markdown fences if present
@@ -119,7 +124,9 @@ Return ONLY valid JSON with exactly two keys:
                 elif "```" in text:
                     text = text.split("```")[1].strip()
                 parsed = json.loads(text)
-                logger.info(f"_call_groq: Success. Keys returned: {list(parsed.keys())}")
+                logger.info(
+                    f"_call_groq: Success. Keys returned: {list(parsed.keys())}"
+                )
                 return parsed
             except Exception as e:
                 logger.error(f"_call_groq: Groq API error — {type(e).__name__}: {e}")
@@ -133,7 +140,9 @@ Return ONLY valid JSON with exactly two keys:
         """
         signal_id_str = str(signal_id)
         if signal_id_str in _in_progress:
-            logger.warning(f"generate_summary: Signal {signal_id_str} already in progress. Skipping.")
+            logger.warning(
+                f"generate_summary: Signal {signal_id_str} already in progress. Skipping."
+            )
             return False
 
         _in_progress.add(signal_id_str)
@@ -142,24 +151,36 @@ Return ONLY valid JSON with exactly two keys:
             result = await db.execute(stmt)
             signal = result.scalars().first()
             if not signal:
-                logger.error(f"generate_summary: Signal {signal_id_str} not found in DB.")
+                logger.error(
+                    f"generate_summary: Signal {signal_id_str} not found in DB."
+                )
                 return False
 
             if signal.one_liner:
-                logger.info(f"generate_summary: Signal {signal_id_str} already has one_liner. Skipping.")
+                logger.info(
+                    f"generate_summary: Signal {signal_id_str} already has one_liner. Skipping."
+                )
                 return True
 
             context = {
                 "symbol": signal.symbol,
                 "signal_type": signal.signal_type,
-                "win_rate_5d": float(signal.win_rate_5d) if signal.win_rate_5d else None,
-                "win_rate_15d": float(signal.win_rate_15d) if signal.win_rate_15d else None,
+                "win_rate_5d": (
+                    float(signal.win_rate_5d) if signal.win_rate_5d else None
+                ),
+                "win_rate_15d": (
+                    float(signal.win_rate_15d) if signal.win_rate_15d else None
+                ),
                 "confluence_score": signal.confluence_score,
                 "high_confluence": signal.high_confluence,
             }
 
-            logger.info(f"generate_summary: Generating for signal {signal_id_str} ({signal.symbol})")
-            parsed = await self._call_groq(self._build_summary_prompt(context), self.summary_model)
+            logger.info(
+                f"generate_summary: Generating for signal {signal_id_str} ({signal.symbol})"
+            )
+            parsed = await self._call_groq(
+                self._build_summary_prompt(context), self.summary_model
+            )
             if not parsed:
                 return False
 
@@ -169,15 +190,23 @@ Return ONLY valid JSON with exactly two keys:
 
             # Cache it
             cache_key = f"signal_explain:{signal_id_str}"
-            await self.redis_client.set(cache_key, json.dumps({
-                "one_liner": signal.one_liner,
-                "paragraph": signal.paragraph_explanation,
-                "deep_dive": signal.deep_dive or "",
-            }), ex=86400 * 7)
+            await self.redis_client.set(
+                cache_key,
+                json.dumps(
+                    {
+                        "one_liner": signal.one_liner,
+                        "paragraph": signal.paragraph_explanation,
+                        "deep_dive": signal.deep_dive or "",
+                    }
+                ),
+                ex=86400 * 7,
+            )
             logger.info(f"generate_summary: Committed and cached for {signal_id_str}.")
             return True
         except Exception as e:
-            logger.error(f"generate_summary: Unexpected error for {signal_id_str} — {e}")
+            logger.error(
+                f"generate_summary: Unexpected error for {signal_id_str} — {e}"
+            )
             return False
         finally:
             _in_progress.discard(signal_id_str)
@@ -189,14 +218,21 @@ Return ONLY valid JSON with exactly two keys:
         """
         signal_id_str = str(signal_id)
         if signal_id_str in _in_progress:
-            logger.warning(f"generate_deep_dive: Signal {signal_id_str} already in progress.")
+            logger.warning(
+                f"generate_deep_dive: Signal {signal_id_str} already in progress."
+            )
             return None
 
         _in_progress.add(signal_id_str)
         try:
             # Eager-load the pattern relationship
             from sqlalchemy.orm import selectinload
-            stmt = select(Signal).where(Signal.id == signal_id).options(selectinload(Signal.pattern))
+
+            stmt = (
+                select(Signal)
+                .where(Signal.id == signal_id)
+                .options(selectinload(Signal.pattern))
+            )
             result = await db.execute(stmt)
             signal = result.scalars().first()
             if not signal:
@@ -204,36 +240,49 @@ Return ONLY valid JSON with exactly two keys:
                 return None
 
             if signal.deep_dive:
-                logger.info(f"generate_deep_dive: Already exists for {signal_id_str}. Returning cached.")
+                logger.info(
+                    f"generate_deep_dive: Already exists for {signal_id_str}. Returning cached."
+                )
                 return signal.deep_dive
 
             logger.info(f"generate_deep_dive: Fetching news for {signal.symbol}...")
-            news = await asyncio.to_thread(self.web_searcher.get_latest_news, signal.symbol)
+            news = await asyncio.to_thread(
+                self.web_searcher.get_latest_news, signal.symbol
+            )
 
             # ── Load corporate events ────────────────────────────────────────
             events_summary = []
             if signal.event_ids:
                 from app.models.events import CorporateEvent
+
                 evt_stmt = select(CorporateEvent).where(
                     CorporateEvent.id.in_([str(e) for e in signal.event_ids])
                 )
                 evt_result = await db.execute(evt_stmt)
                 events = evt_result.scalars().all()
                 for ev in events:
-                    events_summary.append({
-                        "event_type": ev.event_type,
-                        "party_name": ev.party_name,
-                        "event_date": str(ev.event_date),
-                        "total_value_cr": float(ev.total_value_cr) if ev.total_value_cr else None,
-                        "is_anomaly": ev.is_anomaly,
-                    })
+                    events_summary.append(
+                        {
+                            "event_type": ev.event_type,
+                            "party_name": ev.party_name,
+                            "event_date": str(ev.event_date),
+                            "total_value_cr": (
+                                float(ev.total_value_cr) if ev.total_value_cr else None
+                            ),
+                            "is_anomaly": ev.is_anomaly,
+                        }
+                    )
 
             # ── Build enriched context ───────────────────────────────────────
             context = {
                 "symbol": signal.symbol,
                 "signal_type": signal.signal_type,
-                "win_rate_5d": float(signal.win_rate_5d) if signal.win_rate_5d else None,
-                "win_rate_15d": float(signal.win_rate_15d) if signal.win_rate_15d else None,
+                "win_rate_5d": (
+                    float(signal.win_rate_5d) if signal.win_rate_5d else None
+                ),
+                "win_rate_15d": (
+                    float(signal.win_rate_15d) if signal.win_rate_15d else None
+                ),
                 "confluence_score": signal.confluence_score,
                 "high_confluence": signal.high_confluence,
                 "low_confidence": signal.low_confidence,
@@ -265,7 +314,9 @@ Return ONLY valid JSON with exactly two keys:
                 f"events={len(events_summary)}, news_items={len(news) if news else 0}"
             )
 
-            logger.info(f"generate_deep_dive: Calling Groq for deep dive on {signal_id_str}...")
+            logger.info(
+                f"generate_deep_dive: Calling Groq for deep dive on {signal_id_str}..."
+            )
             parsed = await self._call_groq(self._build_prompt(context), self.model)
             if not parsed:
                 return None
@@ -281,20 +332,30 @@ Return ONLY valid JSON with exactly two keys:
 
             # Update cache
             cache_key = f"signal_explain:{signal_id_str}"
-            await self.redis_client.set(cache_key, json.dumps({
-                "one_liner": signal.one_liner,
-                "paragraph": signal.paragraph_explanation,
-                "deep_dive": signal.deep_dive,
-            }), ex=86400 * 7)
+            await self.redis_client.set(
+                cache_key,
+                json.dumps(
+                    {
+                        "one_liner": signal.one_liner,
+                        "paragraph": signal.paragraph_explanation,
+                        "deep_dive": signal.deep_dive,
+                    }
+                ),
+                ex=86400 * 7,
+            )
             logger.info(f"generate_deep_dive: Committed deep dive for {signal_id_str}.")
             return signal.deep_dive
         except Exception as e:
-            logger.error(f"generate_deep_dive: Error for {signal_id_str} — {e}", exc_info=True)
+            logger.error(
+                f"generate_deep_dive: Error for {signal_id_str} — {e}", exc_info=True
+            )
             return None
         finally:
             _in_progress.discard(signal_id_str)
 
-    async def stream_deep_dive(self, signal_id: str, db: AsyncSession) -> AsyncGenerator[str, None]:
+    async def stream_deep_dive(
+        self, signal_id: str, db: AsyncSession
+    ) -> AsyncGenerator[str, None]:
         """
         Stream the deep_dive explanation as SSE events.
         Cache → DB → Generate (in that priority order).
@@ -310,7 +371,9 @@ Return ONLY valid JSON with exactly two keys:
         if cached_data:
             deep_dive_text = json.loads(cached_data).get("deep_dive", "")
             if deep_dive_text:
-                logger.info(f"stream_deep_dive: Serving from Redis cache for {signal_id_str}")
+                logger.info(
+                    f"stream_deep_dive: Serving from Redis cache for {signal_id_str}"
+                )
 
         # 2. DB fallback
         if not deep_dive_text:
@@ -323,11 +386,15 @@ Return ONLY valid JSON with exactly two keys:
 
         # 3. Generate on demand
         if not deep_dive_text:
-            logger.info(f"stream_deep_dive: Cache miss — generating deep dive for {signal_id_str}")
+            logger.info(
+                f"stream_deep_dive: Cache miss — generating deep dive for {signal_id_str}"
+            )
             deep_dive_text = await self.generate_deep_dive(db, signal_id_str) or ""
 
         if not deep_dive_text:
-            logger.warning(f"stream_deep_dive: No content available for {signal_id_str}")
+            logger.warning(
+                f"stream_deep_dive: No content available for {signal_id_str}"
+            )
             yield "data: Deep dive analysis unavailable. This may be due to a Groq API rate limit. Please try again in a few seconds.\n\n"
             yield "data: [DONE]\n\n"
             return
@@ -338,8 +405,11 @@ Return ONLY valid JSON with exactly two keys:
         # Stream in sentence-sized chunks for SSE
         # Split by sentence boundary for more natural reading experience
         import re
-        sentences = re.split(r'(?<=[.!?])\s+', deep_dive_text.strip())
-        logger.info(f"stream_deep_dive: Streaming {len(sentences)} sentences for {signal_id_str}")
+
+        sentences = re.split(r"(?<=[.!?])\s+", deep_dive_text.strip())
+        logger.info(
+            f"stream_deep_dive: Streaming {len(sentences)} sentences for {signal_id_str}"
+        )
         for sentence in sentences:
             if sentence.strip():
                 yield f"data: {sentence.strip()}\n\n"

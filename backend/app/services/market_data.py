@@ -13,6 +13,7 @@ for NSE equities specifically.
 Interval mappings:
   yfinance "15m" / "1d"  ←→  Angel One "FIFTEEN_MINUTE" / "ONE_DAY"
 """
+
 import yfinance as yf
 import pandas as pd
 from datetime import datetime, timedelta
@@ -29,6 +30,7 @@ IST = pytz.timezone("Asia/Kolkata")
 
 # ── Date range helpers ────────────────────────────────────────────────────────
 
+
 def _date_range_for(interval: str) -> tuple[datetime, datetime]:
     """
     Returns (from_date, to_date) in IST for a given candle interval.
@@ -36,12 +38,12 @@ def _date_range_for(interval: str) -> tuple[datetime, datetime]:
     """
     now = datetime.now(IST)
     ranges = {
-        "1m":  timedelta(days=29),    # Angel One: max 30 days for 1m
-        "5m":  timedelta(days=45),    # Angel One: max 100 days for 5m
-        "15m": timedelta(days=200),   # Angel One: max 200 days for 15m
-        "30m": timedelta(days=200),   # Angel One: max 200 days for 30m
-        "1h":  timedelta(days=365),   # Angel One: max 2 years for 1h
-        "1d":  timedelta(days=730),   # Angel One: unlimited — use 2 years
+        "1m": timedelta(days=29),  # Angel One: max 30 days for 1m
+        "5m": timedelta(days=45),  # Angel One: max 100 days for 5m
+        "15m": timedelta(days=200),  # Angel One: max 200 days for 15m
+        "30m": timedelta(days=200),  # Angel One: max 200 days for 30m
+        "1h": timedelta(days=365),  # Angel One: max 2 years for 1h
+        "1d": timedelta(days=730),  # Angel One: unlimited — use 2 years
     }
     delta = ranges.get(interval, timedelta(days=30))
     from_date = now - delta
@@ -49,6 +51,7 @@ def _date_range_for(interval: str) -> tuple[datetime, datetime]:
 
 
 # ── DB upsert helper ──────────────────────────────────────────────────────────
+
 
 async def _upsert_candles(symbol: str, interval: str, candles: list[dict]):
     """
@@ -73,27 +76,34 @@ async def _upsert_candles(symbol: str, interval: str, candles: list[dict]):
             if not (h >= o and h >= cl and h >= l and l <= o and l <= cl):
                 continue
 
-            stmt = insert(OHLCCandle).values(
-                symbol=symbol,
-                timestamp=ts,
-                timeframe=interval,
-                open=o,
-                high=h,
-                low=l,
-                close=cl,
-                volume=vol,
-                is_stale=False,
-            ).on_conflict_do_update(
-                index_elements=["symbol", "timestamp", "timeframe"],
-                set_=dict(open=o, high=h, low=l, close=cl, volume=vol),
+            stmt = (
+                insert(OHLCCandle)
+                .values(
+                    symbol=symbol,
+                    timestamp=ts,
+                    timeframe=interval,
+                    open=o,
+                    high=h,
+                    low=l,
+                    close=cl,
+                    volume=vol,
+                    is_stale=False,
+                )
+                .on_conflict_do_update(
+                    index_elements=["symbol", "timestamp", "timeframe"],
+                    set_=dict(open=o, high=h, low=l, close=cl, volume=vol),
+                )
             )
             await session.execute(stmt)
         await session.commit()
 
-    logger.info(f"market_data: Upserted {len(candles)} candles for {symbol} @ {interval}")
+    logger.info(
+        f"market_data: Upserted {len(candles)} candles for {symbol} @ {interval}"
+    )
 
 
 # ── Angel One fetch ───────────────────────────────────────────────────────────
+
 
 async def _fetch_via_angel_one(symbol: str, interval: str) -> list[dict]:
     """
@@ -116,7 +126,7 @@ async def _fetch_via_angel_one(symbol: str, interval: str) -> list[dict]:
             interval=interval,
             from_date=from_date,
             to_date=to_date,
-        )
+        ),
     )
     return candles or []
 
@@ -124,13 +134,14 @@ async def _fetch_via_angel_one(symbol: str, interval: str) -> list[dict]:
 # ── yfinance fallback fetch ───────────────────────────────────────────────────
 
 _YFINANCE_PERIOD_MAP = {
-    "1m":  "7d",    # yfinance max for 1m is 7 days
-    "5m":  "60d",   # yfinance max for 5m
-    "15m": "60d",   # yfinance max for 15m
+    "1m": "7d",  # yfinance max for 1m is 7 days
+    "5m": "60d",  # yfinance max for 5m
+    "15m": "60d",  # yfinance max for 15m
     "30m": "60d",
-    "1h":  "2y",
-    "1d":  "5y",
+    "1h": "2y",
+    "1d": "5y",
 }
+
 
 def _fetch_via_yfinance(symbol_ns: str, interval: str) -> list[dict]:
     """
@@ -150,22 +161,31 @@ def _fetch_via_yfinance(symbol_ns: str, interval: str) -> list[dict]:
         candles = []
         for _, row in df.iterrows():
             pt = row[time_col]
-            ts = pt.to_pydatetime().astimezone(IST) if pt.tzinfo else IST.localize(pt.to_pydatetime())
-            candles.append({
-                "timestamp": ts,
-                "open":   float(row["Open"]),
-                "high":   float(row["High"]),
-                "low":    float(row["Low"]),
-                "close":  float(row["Close"]),
-                "volume": int(row["Volume"]),
-            })
+            ts = (
+                pt.to_pydatetime().astimezone(IST)
+                if pt.tzinfo
+                else IST.localize(pt.to_pydatetime())
+            )
+            candles.append(
+                {
+                    "timestamp": ts,
+                    "open": float(row["Open"]),
+                    "high": float(row["High"]),
+                    "low": float(row["Low"]),
+                    "close": float(row["Close"]),
+                    "volume": int(row["Volume"]),
+                }
+            )
         return candles
     except Exception as e:
-        logger.warning(f"market_data: yfinance fallback failed for {symbol_ns} {interval}: {e}")
+        logger.warning(
+            f"market_data: yfinance fallback failed for {symbol_ns} {interval}: {e}"
+        )
         return []
 
 
 # ── Public API ────────────────────────────────────────────────────────────────
+
 
 async def fetch_and_store_klines(symbol: str, interval: str, period: str = None):
     """
@@ -187,21 +207,29 @@ async def fetch_and_store_klines(symbol: str, interval: str, period: str = None)
     candles = await _fetch_via_angel_one(base_symbol, interval)
 
     if candles:
-        logger.info(f"market_data: ✓ Angel One data for {base_symbol} {interval} ({len(candles)} candles)")
+        logger.info(
+            f"market_data: ✓ Angel One data for {base_symbol} {interval} ({len(candles)} candles)"
+        )
     else:
         # ── Fallback to yfinance ─────────────────────────────────────────────
-        logger.info(f"market_data: ↩ Falling back to yfinance for {base_symbol} {interval}")
+        logger.info(
+            f"market_data: ↩ Falling back to yfinance for {base_symbol} {interval}"
+        )
         candles = await asyncio.get_running_loop().run_in_executor(
             None, lambda: _fetch_via_yfinance(symbol_ns, interval)
         )
         if candles:
-            logger.info(f"market_data: ✓ yfinance data for {base_symbol} {interval} ({len(candles)} candles)")
+            logger.info(
+                f"market_data: ✓ yfinance data for {base_symbol} {interval} ({len(candles)} candles)"
+            )
 
     # Upsert whatever we got
     if candles:
         await _upsert_candles(base_symbol, interval, candles)
     else:
-        logger.warning(f"market_data: ✗ No data for {base_symbol} {interval} from any source.")
+        logger.warning(
+            f"market_data: ✗ No data for {base_symbol} {interval} from any source."
+        )
 
 
 async def run_market_data_pipeline():

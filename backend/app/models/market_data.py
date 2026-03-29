@@ -2,6 +2,7 @@ from sqlalchemy import Column, String, Numeric, BigInteger, Boolean, DateTime
 from sqlalchemy.dialects.postgresql import TIMESTAMP, JSONB
 from app.core.database import Base
 
+
 class OHLCCandle(Base):
     __tablename__ = "ohlcv_candles"
 

@@ -20,6 +20,7 @@ router = APIRouter()
 
 redis_client = aioredis.from_url(settings.REDIS_URL, decode_responses=True)
 
+
 async def _get_cache(key: str):
     try:
         val = await redis_client.get(key)
@@ -29,29 +30,33 @@ async def _get_cache(key: str):
         pass
     return None
 
+
 async def _set_cache(key: str, data: dict | list, ttl: int = 60):
     try:
         await redis_client.setex(key, ttl, json.dumps(data))
     except Exception:
         pass
 
+
 # ── Signals Feed ────────────────────────────────────────────────────────────
+
 
 @router.get("/signals")
 async def get_signals(
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
     symbol: Optional[str] = None,
-    signal_type: Optional[str] = None,           # "pattern" | "opportunity"
-    direction: Optional[str] = None,              # "bullish" | "bearish"
-    min_win_rate: Optional[float] = None,         # e.g. 60.0
-    min_confluence: Optional[int] = None,         # 0-3
+    signal_type: Optional[str] = None,  # "pattern" | "opportunity"
+    direction: Optional[str] = None,  # "bullish" | "bearish"
+    min_win_rate: Optional[float] = None,  # e.g. 60.0
+    min_confluence: Optional[int] = None,  # 0-3
     high_confluence_only: bool = False,
-    archived: bool = False,                       # include is_active=FALSE
+    archived: bool = False,  # include is_active=FALSE
     deduplicate_symbol: bool = False,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     from sqlalchemy.orm import selectinload
+
     # Setup global caching layer footprint
     cache_key = f"signals:{skip}:{limit}:{symbol}:{signal_type}:{direction}:{min_win_rate}:{min_confluence}:{high_confluence_only}:{archived}:{deduplicate_symbol}"
     cached = await _get_cache(cache_key)
@@ -70,7 +75,9 @@ async def get_signals(
         stmt = stmt.where(Signal.high_confluence == True)
     if direction:
         # direction comes from the linked detected_pattern
-        stmt = stmt.join(DetectedPattern, Signal.pattern_id == DetectedPattern.id, isouter=True)
+        stmt = stmt.join(
+            DetectedPattern, Signal.pattern_id == DetectedPattern.id, isouter=True
+        )
         stmt = stmt.where(DetectedPattern.signal_direction == direction.lower())
     if min_win_rate is not None:
         stmt = stmt.where(Signal.win_rate_15d >= min_win_rate)
@@ -81,7 +88,7 @@ async def get_signals(
     stmt = stmt.order_by(desc(Signal.signal_rank), desc(Signal.created_at)).limit(300)
     result = await db.execute(stmt)
     all_signals = result.scalars().all()
-    
+
     unique_signals = []
     seen_symbols = set()
     for s in all_signals:
@@ -97,11 +104,15 @@ async def get_signals(
     for s in paged_signals:
         d = _signal_to_dict(s)
         d["companyName"] = s.symbol.replace(".NS", "") + " Ltd"
-        
+
         if getattr(s, "pattern", None):
             d["pattern"] = s.pattern.pattern_name
             d["timeframe"] = s.pattern.timeframe
-            d["direction"] = "Bullish" if s.pattern.signal_direction.lower() == "bullish" else "Bearish"
+            d["direction"] = (
+                "Bullish"
+                if s.pattern.signal_direction.lower() == "bullish"
+                else "Bearish"
+            )
         else:
             d["pattern"] = "AI Radar Event"
             d["timeframe"] = "1d"
@@ -112,15 +123,22 @@ async def get_signals(
             ltp_str = await redis_client.get(f"ltp:{s.symbol}")
             if ltp_str:
                 d["price"] = float(ltp_str)
-                d["change"] = 1.25 if getattr(s, "pattern", None) and s.pattern.signal_direction.lower() == "bullish" else -1.25
+                d["change"] = (
+                    1.25
+                    if getattr(s, "pattern", None)
+                    and s.pattern.signal_direction.lower() == "bullish"
+                    else -1.25
+                )
             else:
                 # Query DB for latest 1d close prices to populate UI
                 clean_sym = s.symbol.upper().replace(".NS", "").replace(".BO", "")
-                latest_stmt = select(OHLCCandle).where(
-                    OHLCCandle.symbol == clean_sym,
-                    OHLCCandle.timeframe == "1d"
-                ).order_by(desc(OHLCCandle.timestamp)).limit(2)
-                
+                latest_stmt = (
+                    select(OHLCCandle)
+                    .where(OHLCCandle.symbol == clean_sym, OHLCCandle.timeframe == "1d")
+                    .order_by(desc(OHLCCandle.timestamp))
+                    .limit(2)
+                )
+
                 res = await db.execute(latest_stmt)
                 candles = res.scalars().all()
                 if len(candles) >= 1:
@@ -135,21 +153,23 @@ async def get_signals(
         except Exception:
             d["price"] = 0.0
             d["change"] = 0.0
-            
+
         data_payload.append(d)
 
     result_payload = {
         "data": data_payload,
         "skip": skip,
         "limit": limit,
-        "total": len(unique_signals)
+        "total": len(unique_signals),
     }
     await _set_cache(cache_key, result_payload, ttl=30)
     return result_payload
 
 
 @router.get("/signals/{signal_id}")
-async def get_signal_detail(signal_id: str = Path(...), db: AsyncSession = Depends(get_db)):
+async def get_signal_detail(
+    signal_id: str = Path(...), db: AsyncSession = Depends(get_db)
+):
     """Full signal detail — backtest metrics, confluence events, paragraph explanation."""
     stmt = select(Signal).where(Signal.id == signal_id)
     result = await db.execute(stmt)
@@ -169,7 +189,9 @@ async def get_signal_detail(signal_id: str = Path(...), db: AsyncSession = Depen
                 "pattern_name": pattern.pattern_name,
                 "signal_direction": pattern.signal_direction,
                 "timeframe": pattern.timeframe,
-                "detected_at": pattern.detected_at.isoformat() if pattern.detected_at else None,
+                "detected_at": (
+                    pattern.detected_at.isoformat() if pattern.detected_at else None
+                ),
             }
 
     # Attach corporate events
@@ -192,6 +214,7 @@ async def get_signal_detail(signal_id: str = Path(...), db: AsyncSession = Depen
 
     return detail
 
+
 @router.post("/stock/{symbol}/analyze")
 async def analyze_stock_on_demand(
     symbol: str = Path(...),
@@ -205,6 +228,7 @@ async def analyze_stock_on_demand(
     This eliminates ECONNRESET / proxy timeout for slow first-time fetches.
     """
     import logging
+
     logger = logging.getLogger("investorradar.api")
     symbol_ns = symbol.upper()
     if not symbol_ns.endswith(".NS"):
@@ -218,6 +242,7 @@ async def analyze_stock_on_demand(
         from app.services.opportunity_radar import detect_opportunities
         from app.services.corporate_events import fetch_and_store_yahoo_news
         from app.services.backtester import run_backtesting_engine
+
         logger.info(f"BG pipeline starting for {base_symbol}")
         try:
             # 1. Fetch all timeframes in parallel — much faster
@@ -241,13 +266,14 @@ async def analyze_stock_on_demand(
         except Exception as e:
             logger.error(f"BG pipeline error for {base_symbol}: {e}", exc_info=True)
 
-
     background_tasks.add_task(_run_pipeline)
     return {"status": "processing", "symbol": base_symbol}
 
 
 @router.get("/stock/{symbol}/status")
-async def stock_data_status(symbol: str = Path(...), db: AsyncSession = Depends(get_db)):
+async def stock_data_status(
+    symbol: str = Path(...), db: AsyncSession = Depends(get_db)
+):
     """Poll this after /analyze to check when OHLCV data is ready."""
     base_symbol = symbol.upper().replace(".NS", "")
     count_res = await db.execute(
@@ -259,52 +285,72 @@ async def stock_data_status(symbol: str = Path(...), db: AsyncSession = Depends(
     count = count_res.scalar() or 0
     return {"symbol": base_symbol, "ready": count > 0, "candle_count": count}
 
-        
 
 # ── Stock Data ────────────────────────────────────────────────────────────────
+
 
 @router.get("/search")
 async def search_stock(q: str = Query(...)):
     """Resolves generic search terms into precise Yahoo Finance tickers."""
     import requests
+
     headers = {"User-Agent": "Mozilla/5.0"}
-    res = requests.get(f"https://query2.finance.yahoo.com/v1/finance/search?q={q}&quotesCount=5&newsCount=0", headers=headers)
+    res = requests.get(
+        f"https://query2.finance.yahoo.com/v1/finance/search?q={q}&quotesCount=5&newsCount=0",
+        headers=headers,
+    )
     if res.status_code == 200:
         data = res.json()
         quotes = data.get("quotes", [])
         for q_dict in quotes:
-            ex = q_dict.get('exchange', '')
-            sym = q_dict.get('symbol', '')
-            if ex in ['NSI', 'BSE'] and not sym.endswith(".BO"):
-                return {"symbol": sym, "name": q_dict.get('shortname')}
+            ex = q_dict.get("exchange", "")
+            sym = q_dict.get("symbol", "")
+            if ex in ["NSI", "BSE"] and not sym.endswith(".BO"):
+                return {"symbol": sym, "name": q_dict.get("shortname")}
         if quotes:
-            return {"symbol": quotes[0].get('symbol'), "name": quotes[0].get('shortname')}
-    
+            return {
+                "symbol": quotes[0].get("symbol"),
+                "name": quotes[0].get("shortname"),
+            }
+
     # Fallback to direct input
     sym = q.upper()
-    if not sym.endswith(".NS"): sym += ".NS"
+    if not sym.endswith(".NS"):
+        sym += ".NS"
     return {"symbol": sym, "name": q.upper()}
+
 
 @router.get("/search/suggestions")
 async def search_stock_suggestions(q: str = Query(...)):
     """Resolves search prefixes into autocomplete suggestions."""
     import requests
+
     headers = {"User-Agent": "Mozilla/5.0"}
-    res = requests.get(f"https://query2.finance.yahoo.com/v1/finance/search?q={q}&quotesCount=6&newsCount=0", headers=headers)
+    res = requests.get(
+        f"https://query2.finance.yahoo.com/v1/finance/search?q={q}&quotesCount=6&newsCount=0",
+        headers=headers,
+    )
     results = []
     if res.status_code == 200:
         quotes = res.json().get("quotes", [])
         for q_dict in quotes:
-            ex = q_dict.get('exchange', '')
-            sym = q_dict.get('symbol', '')
+            ex = q_dict.get("exchange", "")
+            sym = q_dict.get("symbol", "")
             # Allow Indian stocks specifically
-            if ex in ['NSI', 'BSE'] and not sym.endswith(".BO"):
-                results.append({"symbol": sym, "name": q_dict.get('shortname', sym), "exchange": ex})
-    
+            if ex in ["NSI", "BSE"] and not sym.endswith(".BO"):
+                results.append(
+                    {
+                        "symbol": sym,
+                        "name": q_dict.get("shortname", sym),
+                        "exchange": ex,
+                    }
+                )
+
     # Fallback to direct input pattern if none resolved
     if not results:
         sym = q.upper()
-        if not sym.endswith(".NS"): sym += ".NS"
+        if not sym.endswith(".NS"):
+            sym += ".NS"
         results.append({"symbol": sym, "name": q.upper(), "exchange": "Custom"})
 
     return results
@@ -316,7 +362,7 @@ async def get_stock_ohlcv(
     timeframe: str = Query("15m", regex="^(1m|5m|15m|1d)$"),
     from_ts: Optional[str] = Query(None, alias="from"),
     to_ts: Optional[str] = Query(None, alias="to"),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """OHLCV formatted for lightweight-charts. Supports timeframe + date range filters."""
     clean_sym = symbol.upper().replace(".NS", "").replace(".BO", "")
@@ -326,8 +372,7 @@ async def get_stock_ohlcv(
         return cached
 
     stmt = select(OHLCCandle).where(
-        OHLCCandle.symbol == clean_sym,
-        OHLCCandle.timeframe == timeframe
+        OHLCCandle.symbol == clean_sym, OHLCCandle.timeframe == timeframe
     )
     if from_ts:
         stmt = stmt.where(OHLCCandle.timestamp >= datetime.fromisoformat(from_ts))
@@ -345,7 +390,7 @@ async def get_stock_ohlcv(
             "high": float(c.high),
             "low": float(c.low),
             "close": float(c.close),
-            "volume": c.volume
+            "volume": c.volume,
         }
         for c in candles
     ]
@@ -359,12 +404,14 @@ async def get_stock_patterns(
     symbol: str = Path(...),
     from_ts: Optional[str] = Query(None, alias="from"),
     to_ts: Optional[str] = Query(None, alias="to"),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     clean_sym = symbol.upper().replace(".NS", "").replace(".BO", "")
     stmt = select(DetectedPattern).where(DetectedPattern.symbol == clean_sym)
     if from_ts:
-        stmt = stmt.where(DetectedPattern.detected_at >= datetime.fromisoformat(from_ts))
+        stmt = stmt.where(
+            DetectedPattern.detected_at >= datetime.fromisoformat(from_ts)
+        )
     if to_ts:
         stmt = stmt.where(DetectedPattern.detected_at <= datetime.fromisoformat(to_ts))
     stmt = stmt.order_by(desc(DetectedPattern.detected_at)).limit(100)
@@ -388,14 +435,18 @@ async def get_stock_events(
     symbol: str = Path(...),
     from_ts: Optional[str] = Query(None, alias="from"),
     to_ts: Optional[str] = Query(None, alias="to"),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     clean_sym = symbol.upper().replace(".NS", "").replace(".BO", "")
     stmt = select(CorporateEvent).where(CorporateEvent.symbol == clean_sym)
     if from_ts:
-        stmt = stmt.where(CorporateEvent.event_date >= datetime.fromisoformat(from_ts).date())
+        stmt = stmt.where(
+            CorporateEvent.event_date >= datetime.fromisoformat(from_ts).date()
+        )
     if to_ts:
-        stmt = stmt.where(CorporateEvent.event_date <= datetime.fromisoformat(to_ts).date())
+        stmt = stmt.where(
+            CorporateEvent.event_date <= datetime.fromisoformat(to_ts).date()
+        )
     stmt = stmt.order_by(desc(CorporateEvent.event_date)).limit(50)
     result = await db.execute(stmt)
     events = result.scalars().all()
@@ -418,22 +469,31 @@ async def get_stock_events(
 
 # ── LLM Explain (SSE) ─────────────────────────────────────────────────────────
 
+
 @router.get("/explain/{signal_id}")
-async def explain_signal(signal_id: str = Path(...), db: AsyncSession = Depends(get_db)):
+async def explain_signal(
+    signal_id: str = Path(...), db: AsyncSession = Depends(get_db)
+):
     """Stream deep-dive LLM explanation via SSE."""
     return EventSourceResponse(llm_service.stream_deep_dive(signal_id, db))
 
 
 # ── Alerts (SSE) ───────────────────────────────────────────────────────────────
 
+
 @router.get("/alerts")
 async def stream_alerts(db: AsyncSession = Depends(get_db)):
     """Real-time SSE push of newly created signals."""
+
     async def event_generator():
         last_checked = datetime.utcnow()
         while True:
             await asyncio.sleep(5)
-            stmt = select(Signal).where(Signal.created_at > last_checked).order_by(Signal.created_at)
+            stmt = (
+                select(Signal)
+                .where(Signal.created_at > last_checked)
+                .order_by(Signal.created_at)
+            )
             result = await db.execute(stmt)
             new_signals = result.scalars().all()
 
@@ -448,6 +508,7 @@ async def stream_alerts(db: AsyncSession = Depends(get_db)):
 
 
 # ── Health ────────────────────────────────────────────────────────────────────
+
 
 @router.get("/health/pipeline")
 async def pipeline_health(db: AsyncSession = Depends(get_db)):
@@ -465,7 +526,9 @@ async def pipeline_health(db: AsyncSession = Depends(get_db)):
 
         stale = False
         if last_refresh_at:
-            age_minutes = (datetime.utcnow() - last_refresh_at.replace(tzinfo=None)).total_seconds() / 60
+            age_minutes = (
+                datetime.utcnow() - last_refresh_at.replace(tzinfo=None)
+            ).total_seconds() / 60
             stale = age_minutes > 30
 
         return {
@@ -473,13 +536,14 @@ async def pipeline_health(db: AsyncSession = Depends(get_db)):
             "last_refresh_at": last_refresh_at.isoformat() if last_refresh_at else None,
             "active_signal_count": active_count,
             "data_stale": stale,
-            "version": "1.0.0"
+            "version": "1.0.0",
         }
     except Exception as e:
         return {"status": "degraded", "error": str(e)}
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
+
 
 def _signal_to_dict(s: Signal) -> dict:
     return {
@@ -503,11 +567,14 @@ def _signal_to_dict(s: Signal) -> dict:
 
 # ── Signal Expiry Job (called from scheduler in main.py) ──────────────────────
 
+
 async def expire_old_signals():
     """Sets is_active=FALSE for signals older than 5 trading days (~7 calendar days)."""
     cutoff = datetime.utcnow() - timedelta(days=7)
     async with AsyncSessionLocal() as session:
-        stmt = select(Signal).where(Signal.created_at < cutoff, Signal.is_active == True)
+        stmt = select(Signal).where(
+            Signal.created_at < cutoff, Signal.is_active == True
+        )
         result = await session.execute(stmt)
         old_signals = result.scalars().all()
         for sig in old_signals:

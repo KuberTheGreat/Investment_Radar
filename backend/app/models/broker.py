@@ -2,6 +2,7 @@
 Broker Session Model — Stores Angel One SmartAPI session tokens per user.
 Tokens are refreshed daily by the APScheduler job in main.py.
 """
+
 import uuid
 from datetime import datetime
 from sqlalchemy import Column, String, DateTime, Text, Boolean
@@ -11,6 +12,7 @@ from app.core.database import Base
 
 class BrokerSession(Base):
     """Persists Angel One JWT tokens vaulted after successful authentication."""
+
     __tablename__ = "broker_sessions"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -28,7 +30,9 @@ class BrokerSession(Base):
     authenticated_at = Column(DateTime(timezone=True), nullable=True)
     expires_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
-    updated_at = Column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = Column(
+        DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow
+    )
 
     def __repr__(self) -> str:
         return f"<BrokerSession client={self.client_code} active={self.is_active}>"

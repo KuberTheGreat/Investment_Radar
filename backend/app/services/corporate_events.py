@@ -5,8 +5,10 @@ from app.core.database import AsyncSessionLocal
 from app.models.events import CorporateEvent
 from sqlalchemy.dialects.postgresql import insert
 
+
 async def fetch_and_store_yahoo_news(symbol_ns: str):
     import yfinance as yf
+
     try:
         base_symbol = symbol_ns.replace(".NS", "").replace(".BO", "")
         # yfinance operations are strictly synchronous, wrapped asynchronously natively inside gather ops
@@ -17,32 +19,46 @@ async def fetch_and_store_yahoo_news(symbol_ns: str):
         except:
             news_items = []
 
-        if not news_items or not isinstance(news_items, list): 
+        if not news_items or not isinstance(news_items, list):
             return
-            
+
         async with AsyncSessionLocal() as session:
             for item in news_items:
                 content = item.get("content", item)
                 pub_time = content.get("pubDate") or item.get("providerPublishTime")
-                if not pub_time: continue
-                
+                if not pub_time:
+                    continue
+
                 if isinstance(pub_time, (int, float)):
                     event_date = datetime.fromtimestamp(pub_time).date()
                 else:
                     import pandas as pd
+
                     event_date = pd.to_datetime(pub_time).date()
-                    
+
                 title = content.get("title", "News")
-                
+
                 provider = content.get("provider", {})
-                publisher = provider.get("displayName", content.get("publisher", "Yahoo Finance"))
-                
+                publisher = provider.get(
+                    "displayName", content.get("publisher", "Yahoo Finance")
+                )
+
                 url_dict = content.get("clickThroughUrl", {})
                 link = url_dict.get("url", content.get("link", ""))
-                
+
                 # Flag structural anomalies natively if title contains high-impact financial keywords
-                is_anomaly = any(x in title.lower() for x in ["dividend", "earnings", "merger", "acquisition", "split", "buyback"])
-                
+                is_anomaly = any(
+                    x in title.lower()
+                    for x in [
+                        "dividend",
+                        "earnings",
+                        "merger",
+                        "acquisition",
+                        "split",
+                        "buyback",
+                    ]
+                )
+
                 deal = {
                     "symbol": base_symbol,
                     "event_type": "news",
@@ -58,6 +74,7 @@ async def fetch_and_store_yahoo_news(symbol_ns: str):
     except Exception as e:
         print(f"Error fetching news for {symbol_ns}: {e}")
 
+
 async def fetch_and_store_bse_bulk_deals():
     """Fetches BSE bulk/block deals (Simulated)."""
     try:
@@ -71,7 +88,7 @@ async def fetch_and_store_bse_bulk_deals():
                 "price_per_share": 2900.50,
                 "total_value_cr": 145.02,
                 "is_anomaly": True,
-                "source_reference": "https://www.bseindia.com/markets/equity/EQReports/bulk_deals.aspx"
+                "source_reference": "https://www.bseindia.com/markets/equity/EQReports/bulk_deals.aspx",
             }
         ]
 
@@ -83,21 +100,22 @@ async def fetch_and_store_bse_bulk_deals():
     except Exception as e:
         pass
 
+
 async def run_corporate_events_pipeline():
     """Runs the scheduled corporate events ingestion for active user Watchlists."""
     print("Running Corporate Events Ingestion Pipeline...")
     await fetch_and_store_bse_bulk_deals()
-    
+
     from app.models.auth import Watchlist
     from sqlalchemy import select
-    
+
     async with AsyncSessionLocal() as session:
         result = await session.execute(select(Watchlist.symbol).distinct())
         db_symbols = result.scalars().all()
-        
+
     # Default guaranteed anchor for hackathon testing visibility
     active_universe = set([sym + ".NS" for sym in db_symbols] + ["RELIANCE.NS"])
-    
+
     tasks = [fetch_and_store_yahoo_news(sym) for sym in active_universe]
     if tasks:
         await asyncio.gather(*tasks, return_exceptions=True)

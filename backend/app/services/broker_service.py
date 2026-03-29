@@ -7,6 +7,7 @@ Responsibilities:
   Phase 3: Automated order execution engine triggered by AI confluence signals.
   Phase 4: Portfolio & ledger synchronization (positions, margins, order book).
 """
+
 import asyncio
 import logging
 import pyotp
@@ -24,6 +25,7 @@ logger = logging.getLogger("investorradar.broker")
 
 
 # ── Singleton state ───────────────────────────────────────────────────────────
+
 
 class BrokerService:
     """
@@ -50,7 +52,9 @@ class BrokerService:
         configured in ANGELONE_TOTP_KEY. Returns empty string if not configured.
         """
         if not settings.ANGELONE_TOTP_KEY:
-            logger.warning("broker: ANGELONE_TOTP_KEY not configured — TOTP unavailable.")
+            logger.warning(
+                "broker: ANGELONE_TOTP_KEY not configured — TOTP unavailable."
+            )
             return ""
         return pyotp.TOTP(settings.ANGELONE_TOTP_KEY).now()
 
@@ -72,16 +76,18 @@ class BrokerService:
             try:
                 smart = self._build_smart_api()
                 totp_code = self._generate_totp()
-                logger.info(f"broker: Initiating SmartAPI session for {settings.ANGELONE_CLIENT_ID}...")
+                logger.info(
+                    f"broker: Initiating SmartAPI session for {settings.ANGELONE_CLIENT_ID}..."
+                )
 
                 data = smart.generateSession(
-                    settings.ANGELONE_CLIENT_ID,
-                    settings.ANGELONE_PASSWORD,
-                    totp_code
+                    settings.ANGELONE_CLIENT_ID, settings.ANGELONE_PASSWORD, totp_code
                 )
 
                 if data.get("status") is not True:
-                    logger.error(f"broker: Authentication failed — {data.get('message', 'unknown error')}")
+                    logger.error(
+                        f"broker: Authentication failed — {data.get('message', 'unknown error')}"
+                    )
                     return False
 
                 self._smart_api = smart
@@ -94,30 +100,36 @@ class BrokerService:
 
                 # Persist to Postgres
                 async with AsyncSessionLocal() as db:
-                    stmt = pg_insert(BrokerSession).values(
-                        client_code=settings.ANGELONE_CLIENT_ID,
-                        access_token=self._access_token,
-                        refresh_token=refresh_token,
-                        feed_token=self._feed_token,
-                        is_active=True,
-                        authenticated_at=datetime.now(timezone.utc),
-                        expires_at=expires_at,
-                    ).on_conflict_do_update(
-                        index_elements=["client_code"],
-                        set_=dict(
+                    stmt = (
+                        pg_insert(BrokerSession)
+                        .values(
+                            client_code=settings.ANGELONE_CLIENT_ID,
                             access_token=self._access_token,
                             refresh_token=refresh_token,
                             feed_token=self._feed_token,
                             is_active=True,
                             authenticated_at=datetime.now(timezone.utc),
                             expires_at=expires_at,
-                            updated_at=datetime.now(timezone.utc),
+                        )
+                        .on_conflict_do_update(
+                            index_elements=["client_code"],
+                            set_=dict(
+                                access_token=self._access_token,
+                                refresh_token=refresh_token,
+                                feed_token=self._feed_token,
+                                is_active=True,
+                                authenticated_at=datetime.now(timezone.utc),
+                                expires_at=expires_at,
+                                updated_at=datetime.now(timezone.utc),
+                            ),
                         )
                     )
                     await db.execute(stmt)
                     await db.commit()
 
-                logger.info("broker: Authentication successful. Tokens vaulted to Postgres.")
+                logger.info(
+                    "broker: Authentication successful. Tokens vaulted to Postgres."
+                )
                 return True
 
             except Exception as exc:
@@ -134,13 +146,15 @@ class BrokerService:
             result = await db.execute(
                 select(BrokerSession).where(
                     BrokerSession.client_code == settings.ANGELONE_CLIENT_ID,
-                    BrokerSession.is_active == True
+                    BrokerSession.is_active == True,
                 )
             )
             session = result.scalars().first()
 
         if not session or not session.refresh_token:
-            logger.info("broker: No active session found — attempting fresh authentication.")
+            logger.info(
+                "broker: No active session found — attempting fresh authentication."
+            )
             return await self.authenticate()
 
         try:
@@ -150,7 +164,9 @@ class BrokerService:
                 data = smart.generateToken(session.refresh_token)
 
                 if data.get("status") is not True:
-                    logger.warning("broker: Token refresh failed — re-authenticating fresh.")
+                    logger.warning(
+                        "broker: Token refresh failed — re-authenticating fresh."
+                    )
                     return await self.authenticate()
 
                 self._smart_api = smart
@@ -183,7 +199,9 @@ class BrokerService:
         """Return current session state for the broker status API endpoint."""
         return {
             "is_authenticated": self._is_authenticated,
-            "client_code": settings.ANGELONE_CLIENT_ID if self._is_authenticated else None,
+            "client_code": (
+                settings.ANGELONE_CLIENT_ID if self._is_authenticated else None
+            ),
             "has_feed_token": bool(self._feed_token),
         }
 
@@ -312,10 +330,10 @@ class BrokerService:
         self,
         symbol: str,
         exchange: str,
-        transaction_type: str,   # "BUY" | "SELL"
+        transaction_type: str,  # "BUY" | "SELL"
         quantity: int,
-        product_type: str,        # "DELIVERY" | "INTRADAY" | "MARGIN"
-        order_type: str,          # "MARKET" | "LIMIT" | "STOPLOSS_LIMIT"
+        product_type: str,  # "DELIVERY" | "INTRADAY" | "MARGIN"
+        order_type: str,  # "MARKET" | "LIMIT" | "STOPLOSS_LIMIT"
         price: float = 0.0,
         stop_loss_price: float = 0.0,
         tag: str = "InvestmentRadar_AI",
@@ -340,19 +358,19 @@ class BrokerService:
         self._ensure_authenticated()
 
         order_params = {
-            "variety":        "NORMAL",
-            "tradingsymbol":  symbol,
-            "symboltoken":    self._resolve_symbol_token(symbol, exchange),
+            "variety": "NORMAL",
+            "tradingsymbol": symbol,
+            "symboltoken": self._resolve_symbol_token(symbol, exchange),
             "transactiontype": transaction_type.upper(),
-            "exchange":       exchange.upper(),
-            "ordertype":      order_type.upper(),
-            "producttype":    product_type.upper(),
-            "duration":       "DAY",
-            "price":          str(price),
-            "squareoff":      "0",
-            "stoploss":       str(stop_loss_price),
-            "quantity":       str(quantity),
-            "ordertag":       tag,
+            "exchange": exchange.upper(),
+            "ordertype": order_type.upper(),
+            "producttype": product_type.upper(),
+            "duration": "DAY",
+            "price": str(price),
+            "squareoff": "0",
+            "stoploss": str(stop_loss_price),
+            "quantity": str(quantity),
+            "ordertag": tag,
         }
 
         try:
@@ -390,7 +408,9 @@ class BrokerService:
 
     # ── Phase 2: Live Quote Fetch ─────────────────────────────────────────────
 
-    def get_ltp(self, symbol: str, symbol_token: str, exchange: str = "NSE") -> Optional[float]:
+    def get_ltp(
+        self, symbol: str, symbol_token: str, exchange: str = "NSE"
+    ) -> Optional[float]:
         """
         Fetch the Last Traded Price for a symbol using the Angel One LTP API.
         Used as a real-time price fallback when WebSocket is not active.
@@ -408,12 +428,12 @@ class BrokerService:
 
     # Map our internal timeframe strings → Angel One interval constants
     _INTERVAL_MAP = {
-        "1m":  "ONE_MINUTE",
-        "5m":  "FIVE_MINUTE",
+        "1m": "ONE_MINUTE",
+        "5m": "FIVE_MINUTE",
         "15m": "FIFTEEN_MINUTE",
         "30m": "THIRTY_MINUTE",
-        "1h":  "ONE_HOUR",
-        "1d":  "ONE_DAY",
+        "1h": "ONE_HOUR",
+        "1d": "ONE_DAY",
     }
 
     def resolve_token_for_symbol(self, symbol: str, exchange: str = "NSE") -> str:
@@ -424,6 +444,7 @@ class BrokerService:
         """
         # Check websocket cache first (avoids an API round-trip)
         from app.services.market_websocket import _SYMBOL_TOKEN_CACHE
+
         sym = symbol.upper().replace(".NS", "").replace("-EQ", "")
         if sym in _SYMBOL_TOKEN_CACHE:
             return _SYMBOL_TOKEN_CACHE[sym]
@@ -457,29 +478,37 @@ class BrokerService:
 
         ao_interval = self._INTERVAL_MAP.get(interval)
         if not ao_interval:
-            logger.warning(f"broker: Unknown interval '{interval}' — falling back to yfinance.")
+            logger.warning(
+                f"broker: Unknown interval '{interval}' — falling back to yfinance."
+            )
             return []
 
         token = self.resolve_token_for_symbol(symbol, exchange)
         if not token:
-            logger.warning(f"broker: Could not resolve token for {symbol} — falling back to yfinance.")
+            logger.warning(
+                f"broker: Could not resolve token for {symbol} — falling back to yfinance."
+            )
             return []
 
         fmt = "%Y-%m-%d %H:%M"
         params = {
-            "exchange":    exchange,
+            "exchange": exchange,
             "symboltoken": token,
-            "interval":    ao_interval,
-            "fromdate":    from_date.strftime(fmt),
-            "todate":      to_date.strftime(fmt),
+            "interval": ao_interval,
+            "fromdate": from_date.strftime(fmt),
+            "todate": to_date.strftime(fmt),
         }
 
         try:
-            logger.info(f"broker: getCandleData {symbol} {interval} {params['fromdate']} → {params['todate']}")
+            logger.info(
+                f"broker: getCandleData {symbol} {interval} {params['fromdate']} → {params['todate']}"
+            )
             response = self._smart_api.getCandleData(params)
 
             if not response.get("status") or not response.get("data"):
-                logger.warning(f"broker: getCandleData returned no data for {symbol}: {response.get('message')}")
+                logger.warning(
+                    f"broker: getCandleData returned no data for {symbol}: {response.get('message')}"
+                )
                 return []
 
             candles = []
@@ -488,24 +517,35 @@ class BrokerService:
                 if len(row) < 6:
                     continue
                 try:
-                    ts_str, o, h, l, c, v = row[0], row[1], row[2], row[3], row[4], row[5]
+                    ts_str, o, h, l, c, v = (
+                        row[0],
+                        row[1],
+                        row[2],
+                        row[3],
+                        row[4],
+                        row[5],
+                    )
                     # Parse Angel One ISO timestamp
                     ts = datetime.fromisoformat(ts_str)
                     # Validate OHLC integrity
                     if not (h >= o and h >= c and h >= l and l <= o and l <= c):
                         continue
-                    candles.append({
-                        "timestamp": ts,
-                        "open":  float(o),
-                        "high":  float(h),
-                        "low":   float(l),
-                        "close": float(c),
-                        "volume": int(v),
-                    })
+                    candles.append(
+                        {
+                            "timestamp": ts,
+                            "open": float(o),
+                            "high": float(h),
+                            "low": float(l),
+                            "close": float(c),
+                            "volume": int(v),
+                        }
+                    )
                 except Exception:
                     continue
 
-            logger.info(f"broker: getCandleData returned {len(candles)} candles for {symbol} {interval}")
+            logger.info(
+                f"broker: getCandleData returned {len(candles)} candles for {symbol} {interval}"
+            )
             return candles
 
         except Exception as exc:
@@ -515,4 +555,3 @@ class BrokerService:
 
 # ── Global singleton ──────────────────────────────────────────────────────────
 broker_service = BrokerService()
-

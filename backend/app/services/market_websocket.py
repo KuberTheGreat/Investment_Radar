@@ -20,6 +20,7 @@ Subscription modes:
   - 2 = Quote       (LTP + Volume + OHLC)
   - 3 = Snap Quote  (Full market depth — highest overhead)
 """
+
 import json
 import logging
 import threading
@@ -35,42 +36,42 @@ logger = logging.getLogger("investorradar.websocket")
 # Populated on-demand via broker_service.resolve_symbol_token()
 _SYMBOL_TOKEN_CACHE: dict[str, str] = {
     # Pre-seeded common NSE tokens (avoids a round-trip on startup)
-    "RELIANCE":   "2885",
-    "TCS":        "11536",
-    "HDFCBANK":   "1333",
-    "ICICIBANK":  "4963",
-    "INFY":       "1594",
-    "SBIN":       "3045",
-    "LT":         "11483",
-    "ITC":        "1660",
+    "RELIANCE": "2885",
+    "TCS": "11536",
+    "HDFCBANK": "1333",
+    "ICICIBANK": "4963",
+    "INFY": "1594",
+    "SBIN": "3045",
+    "LT": "11483",
+    "ITC": "1660",
     "TATAMOTORS": "3456",
-    "ZOMATO":     "5097",
-    "ETERNAL":    "5097",   # Zomato rebranded to Eternal Ltd
-    "TATASTEEL":  "3506",
-    "ADANIENT":   "25",
-    "WIPRO":      "3787",
-    "HCLTECH":    "7229",
+    "ZOMATO": "5097",
+    "ETERNAL": "5097",  # Zomato rebranded to Eternal Ltd
+    "TATASTEEL": "3506",
+    "ADANIENT": "25",
+    "WIPRO": "3787",
+    "HCLTECH": "7229",
     "BAJFINANCE": "317",
-    "SUNPHARMA":  "3351",
-    "MARUTI":     "10999",
-    "AXISBANK":   "5900",
-    "KOTAKBANK":  "1922",
-    "NTPC":       "11630",
-    "IREDA":      "24232",  # Indian Renewable Energy Development Agency
-    "ONGC":       "2475",
-    "POWERGRID":  "14977",
+    "SUNPHARMA": "3351",
+    "MARUTI": "10999",
+    "AXISBANK": "5900",
+    "KOTAKBANK": "1922",
+    "NTPC": "11630",
+    "IREDA": "24232",  # Indian Renewable Energy Development Agency
+    "ONGC": "2475",
+    "POWERGRID": "14977",
     "BHARTIARTL": "10604",
-    "NESTLEIND":  "17963",
+    "NESTLEIND": "17963",
     "HINDUNILVR": "1394",
     "ASIANPAINT": "236",
     "ULTRACEMCO": "11532",
     "BAJAJFINSV": "16675",
-    "TITAN":      "3506",
-    "HINDALCO":   "1363",
-    "JSWSTEEL":   "11723",
-    "DRREDDY":    "881",
-    "DIVISLAB":   "10940",
-    "CIPLA":      "694",
+    "TITAN": "3506",
+    "HINDALCO": "1363",
+    "JSWSTEEL": "11723",
+    "DRREDDY": "881",
+    "DIVISLAB": "10940",
+    "CIPLA": "694",
 }
 
 
@@ -105,6 +106,7 @@ class MarketWebSocketService:
 
         try:
             from SmartApi.smartWebSocketV2 import SmartWebSocketV2
+
             self._sws = SmartWebSocketV2(
                 auth_token=access_token,
                 api_key=settings.ANGELONE_API_KEY,
@@ -157,14 +159,16 @@ class MarketWebSocketService:
             if token and sym not in self._active_subscriptions:
                 self._active_subscriptions[sym] = token
                 new_tokens.append(token)
-                logger.info(f"websocket: Queuing subscription for {sym} (token={token})")
+                logger.info(
+                    f"websocket: Queuing subscription for {sym} (token={token})"
+                )
 
         if new_tokens and self._connected and self._sws:
             try:
                 self._sws.subscribe(
                     correlation_id="radar",
-                    mode=2,   # Quote mode — LTP + volume + OHLC
-                    token_list=[{"exchangeType": 1, "tokens": new_tokens}]
+                    mode=2,  # Quote mode — LTP + volume + OHLC
+                    token_list=[{"exchangeType": 1, "tokens": new_tokens}],
                 )
                 logger.info(f"websocket: Subscribed to {len(new_tokens)} new tokens.")
             except Exception as exc:
@@ -184,7 +188,7 @@ class MarketWebSocketService:
                 self._sws.unsubscribe(
                     correlation_id="radar",
                     mode=2,
-                    token_list=[{"exchangeType": 1, "tokens": tokens}]
+                    token_list=[{"exchangeType": 1, "tokens": tokens}],
                 )
                 logger.info(f"websocket: Unsubscribed {len(tokens)} tokens.")
             except Exception as exc:
@@ -212,9 +216,11 @@ class MarketWebSocketService:
                 self._sws.subscribe(
                     correlation_id="radar",
                     mode=2,
-                    token_list=[{"exchangeType": 1, "tokens": tokens}]
+                    token_list=[{"exchangeType": 1, "tokens": tokens}],
                 )
-                logger.info(f"websocket: Re-subscribed {len(tokens)} tokens on reconnect.")
+                logger.info(
+                    f"websocket: Re-subscribed {len(tokens)} tokens on reconnect."
+                )
             except Exception as exc:
                 logger.error(f"websocket: on_open subscribe error — {exc}")
 
@@ -277,6 +283,7 @@ class MarketWebSocketService:
         """
         try:
             from app.services.broker_service import broker_service
+
             if not broker_service._smart_api:
                 return None
             data = broker_service._smart_api.searchScrip("NSE", symbol)
@@ -297,6 +304,7 @@ class MarketWebSocketService:
         """
         try:
             import redis as redis_sync
+
             r = redis_sync.from_url(settings.REDIS_URL, decode_responses=True)
             channel = f"{self.CHANNEL_PREFIX}{symbol}"
             r.publish(channel, json.dumps(tick))
